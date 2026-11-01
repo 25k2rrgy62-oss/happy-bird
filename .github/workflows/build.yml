@@ -36,7 +36,8 @@ jobs:
             "appName": "Happy Bird",
             "webDir": "www",
             "backgroundColor": "#16222e",
-            "ios": { "contentInset": "never", "scrollEnabled": false }
+            "ios": { "contentInset": "never", "scrollEnabled": false },
+            "plugins": { "CapacitorHttp": { "enabled": true } }
           }
           JSON
           npx cap add ios
