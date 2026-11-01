@@ -1,0 +1,1680 @@
+<!doctype html>
+<html lang="en" class="app">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+html, body { margin: 0; background: #16222e; overscroll-behavior: none; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<title>Happy Bird</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: a 144x256 pixel canvas scaled up with nearest-neighbour into a centered portrait frame; score, menus and settings are pixel-styled DOM overlays sized from --u (frame width / 360). Scene colors are keyframed in the script. */
+:root {
+  color-scheme: dark;
+  --page: #16222e;
+  --ink: #2b1d14;
+  --paper: #fff6dc;
+  --paper-edge: #e8d29a;
+  --sun: #ffd23f;
+  --berry: #e8463a;
+  --leaf: #6fbf3a;
+  --muted: #7a6a55;
+  --display: "Press Start 2P", "Courier New", monospace;
+  --body: "Pixelify Sans", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--paper);
+  font-family: var(--body);
+  padding-block: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.stage { flex: 1; min-height: 0; min-width: 0; display: grid; place-items: center; }
+
+.frame {
+  --u: 1;
+  position: relative;
+  width: 360px;
+  height: 640px;
+  overflow: hidden;
+  background: var(--page);
+  border: 3px solid var(--ink);
+  box-shadow: 0 6px 0 #0b121a;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+.frame:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+#birdLayer { position: absolute; inset: 0; pointer-events: none; image-rendering: auto; }
+
+/* hard pixel outline for text on the scene */
+.outlined {
+  color: var(--paper);
+  text-shadow:
+    calc(var(--u) * 3px) 0 0 var(--ink), calc(var(--u) * -3px) 0 0 var(--ink),
+    0 calc(var(--u) * 3px) 0 var(--ink), 0 calc(var(--u) * -3px) 0 var(--ink),
+    calc(var(--u) * 3px) calc(var(--u) * 3px) 0 var(--ink), calc(var(--u) * -3px) calc(var(--u) * 3px) 0 var(--ink),
+    calc(var(--u) * 3px) calc(var(--u) * -3px) 0 var(--ink), calc(var(--u) * -3px) calc(var(--u) * -3px) 0 var(--ink),
+    0 calc(var(--u) * 7px) 0 var(--ink);
+}
+
+.score {
+  position: absolute;
+  top: calc(var(--u) * 44px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--display);
+  font-size: calc(var(--u) * 34px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.score.bump { animation: bump 0.16s steps(2); }
+@keyframes bump { 50% { transform: translateY(calc(var(--u) * -5px)); } }
+
+.chip {
+  position: absolute;
+  top: calc(var(--u) * 12px);
+  z-index: 3;
+  font: 600 14px/1 var(--body);
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 0 3px 0 var(--ink);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.chip:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.mute { right: calc(var(--u) * 12px); }
+.settings-btn { left: calc(var(--u) * 12px); }
+.chip:focus-visible, .btn:focus-visible, .opt:focus-visible, .sw:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+
+.ready {
+  position: absolute;
+  top: calc(var(--u) * 92px);
+  left: 0;
+  right: 0;
+  padding-inline: calc(var(--u) * 24px);
+  text-align: center;
+  pointer-events: none;
+}
+.ready h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: calc(var(--u) * 30px);
+  line-height: 1.25;
+  color: var(--sun);
+}
+.ready h1.outlined { color: var(--sun); }
+.card {
+  background: var(--paper);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: inset 0 -4px 0 var(--paper-edge), 0 4px 0 var(--ink);
+}
+.ready .card {
+  width: fit-content;
+  max-width: 100%;
+  margin: calc(var(--u) * 150px) auto 0;
+  padding: 8px 12px;
+  font-size: max(14px, calc(var(--u) * 16px));
+  line-height: 1.35;
+  text-wrap: balance;
+}
+.ready .best-line {
+  margin: 10px auto 0;
+  font-family: var(--display);
+  font-size: max(10px, calc(var(--u) * 11px));
+  letter-spacing: 0.06em;
+}
+
+.over {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  width: calc(var(--u) * 280px);
+  text-align: center;
+  z-index: 2;
+}
+.over h2 {
+  margin: 0 0 calc(var(--u) * 18px);
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: calc(var(--u) * 26px);
+  line-height: 1.2;
+  color: var(--berry);
+}
+.over .card { padding: calc(var(--u) * 16px); animation: drop 0.25s steps(5); }
+@keyframes drop { from { transform: translateY(calc(var(--u) * 60px)); } to { transform: none; } }
+.over dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; }
+.over dt { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.over dd { margin: 6px 0 0; font-family: var(--display); font-size: calc(var(--u) * 24px); line-height: 1; font-variant-numeric: tabular-nums; }
+.badge {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 4px 8px;
+  background: var(--sun);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  font: 600 13px/1 var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.btn {
+  display: block;
+  width: 100%;
+  margin-top: calc(var(--u) * 16px);
+  padding: 12px 14px;
+  background: var(--leaf);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.18), 0 4px 0 var(--ink);
+  font: 400 max(12px, calc(var(--u) * 14px))/1 var(--display);
+  cursor: pointer;
+}
+.btn:active { transform: translateY(3px); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.18), 0 1px 0 var(--ink); }
+.keyhint { margin: 10px 0 0; font-size: 13px; color: var(--paper); }
+
+.panel {
+  position: absolute;
+  left: calc(var(--u) * 14px);
+  right: calc(var(--u) * 14px);
+  bottom: calc(var(--u) * 14px);
+  max-height: calc(100% - var(--u) * 150px);
+  overflow-y: auto;
+  padding: calc(var(--u) * 16px);
+  cursor: default;
+  z-index: 4;
+}
+.panel h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: max(13px, calc(var(--u) * 16px)); line-height: 1.2; }
+.group { margin-top: 14px; }
+.group h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.opts, .swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.opt {
+  font: 600 14px/1 var(--body);
+  padding: 7px 10px;
+  border: 2px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+.opt[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+.sw { width: 32px; height: 32px; padding: 0; border: 2px solid var(--ink); cursor: pointer; }
+.sw[aria-checked="true"] { box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--ink); }
+.note { margin: 8px 0 0; font-size: 14px; color: var(--muted); min-height: 1.3em; }
+
+.shop-btn { left: calc(var(--u) * 12px); top: calc(var(--u) * 12px + 36px); }
+.wallet {
+  position: absolute;
+  top: calc(var(--u) * 12px + 38px);
+  right: calc(var(--u) * 12px);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 400 max(10px, calc(var(--u) * 12px))/1 var(--display);
+  color: var(--paper);
+  text-shadow: 2px 0 0 var(--ink), -2px 0 0 var(--ink), 0 2px 0 var(--ink), 0 -2px 0 var(--ink), 0 3px 0 var(--ink);
+  pointer-events: none;
+}
+.wallet i { width: 12px; height: 12px; background: var(--sun); border: 2px solid var(--ink); border-radius: 50%; box-shadow: inset -2px -2px 0 #d8960f; }
+.run-coins { margin: 12px 0 0; font-size: 15px; font-weight: 600; }
+.btn.alt { background: var(--sun); }
+.btn.ghost { background: var(--paper); }
+.over .btn { margin-top: 10px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.opt:disabled, .sw:disabled { opacity: 0.32; cursor: not-allowed; }
+.hint {
+  position: absolute;
+  left: 50%;
+  top: 64%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.panel-head .count { font: 400 11px/1 var(--display); }
+.shop-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 2px dashed var(--paper-edge); }
+.shop-row .nm { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; }
+.ev-head { margin: 10px 0 2px; font-size: 14px; font-weight: 600; color: var(--berry); }
+.shop-note { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+.sw.pic { width: 40px; height: 40px; padding: 2px; background: var(--paper); }
+.sw.pic img { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.sw-img { width: 34px; height: 34px; flex: none; object-fit: contain; image-rendering: pixelated; }
+.sw-mini { width: 22px; height: 22px; border: 2px solid var(--ink); flex: none; }
+.buy {
+  font: 600 13px/1 var(--body);
+  padding: 7px 10px;
+  min-width: 78px;
+  border: 2px solid var(--ink);
+  background: var(--sun);
+  color: var(--ink);
+  cursor: pointer;
+}
+.buy:disabled { background: var(--paper); opacity: 0.6; cursor: default; }
+.buy:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+
+/* Installed app: edge to edge, HUD below the notch */
+.app body { padding: 0; }
+.app .frame { border: 0; box-shadow: none; }
+.app .score { top: calc(env(safe-area-inset-top, 0px) + var(--u) * 26px); }
+.app .chip { top: calc(env(safe-area-inset-top, 0px) + 6px); }
+.app .shop-btn { top: calc(env(safe-area-inset-top, 0px) + 42px); }
+.app .wallet { top: calc(env(safe-area-inset-top, 0px) + 46px); }
+.app .ready { top: calc(env(safe-area-inset-top, 0px) + var(--u) * 80px); }
+.app .panel {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--u) * 14px);
+  max-height: calc(100% - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 110px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .score.bump, .over .card { animation: none; }
+}
+</style>
+
+<main id="stage" class="stage">
+  <div id="frame" class="frame" role="group" aria-label="Happy Bird. Tap, click or press Space to flap." tabindex="0">
+    <canvas id="scene" width="144" height="256" aria-hidden="true"></canvas>
+    <canvas id="birdLayer" width="144" height="256" aria-hidden="true"></canvas>
+    <div id="score" class="score outlined" hidden>0</div>
+    <button id="settingsBtn" class="chip settings-btn" type="button" aria-expanded="false">Settings</button>
+    <button id="mute" class="chip mute" type="button" aria-pressed="false">Sound on</button>
+    <button id="shopBtn" class="chip shop-btn" type="button" aria-expanded="false">Shop</button>
+    <div class="wallet" aria-label="Coins"><i></i><span id="walletN">0</span></div>
+    <p id="resumeHint" class="card hint" hidden>Tap to keep flying</p>
+
+    <section id="ready" class="ready">
+      <h1 class="outlined">HAPPY<br>BIRD</h1>
+      <p class="card">Tap, click or press Space to flap. Each pipe earns a coin. Floating coins are a bonus.</p>
+      <p id="bestReadyWrap" class="best-line outlined" hidden>BEST <span id="bestReady">0</span></p>
+    </section>
+
+    <section id="over" class="over" role="status" hidden>
+      <h2 class="outlined">GAME OVER</h2>
+      <div class="card">
+        <dl>
+          <div><dt>Score</dt><dd id="scoreEnd">0</dd></div>
+          <div><dt>Best</dt><dd id="bestEnd">0</dd></div>
+        </dl>
+        <span id="newBest" class="badge" hidden>New best</span>
+        <p id="runCoins" class="run-coins"></p>
+      </div>
+      <button id="revive" class="btn alt" type="button">REVIVE · 10</button>
+      <button id="again" class="btn" type="button">PLAY AGAIN</button>
+      <button id="overShop" class="btn ghost" type="button">SHOP</button>
+      <button id="overBack" class="btn ghost" type="button">BACK</button>
+    </section>
+
+    <section id="settings" class="panel card" role="dialog" aria-label="Settings" hidden>
+      <h2>SETTINGS</h2>
+      <div class="group">
+        <h3 id="bgLabel">Time of day</h3>
+        <div id="bgOpts" class="opts" role="radiogroup" aria-labelledby="bgLabel"></div>
+        <p id="bgNote" class="note"></p>
+      </div>
+      <div class="group">
+        <h3 id="seasonLabel">Theme</h3>
+        <div id="seasonOpts" class="opts" role="radiogroup" aria-labelledby="seasonLabel"></div>
+        <p id="seasonNote" class="note"></p>
+      </div>
+      <div class="group">
+        <h3 id="birdLabel">Bird color</h3>
+        <div id="birdOpts" class="swatches" role="radiogroup" aria-labelledby="birdLabel"></div>
+        <p id="birdNote" class="note"></p>
+      </div>
+      <div class="group">
+        <h3 id="skinLabel">Special bird</h3>
+        <div id="skinOpts" class="swatches" role="radiogroup" aria-labelledby="skinLabel"></div>
+      </div>
+      <div class="group">
+        <h3 id="hatLabel">Hat</h3>
+        <div id="hatOpts" class="swatches" role="radiogroup" aria-labelledby="hatLabel"></div>
+      </div>
+      <div class="group">
+        <h3 id="musicLabel">Music</h3>
+        <div id="musicOpts" class="opts" role="radiogroup" aria-labelledby="musicLabel"></div>
+      </div>
+      <button id="settingsDone" class="btn" type="button">DONE</button>
+    </section>
+
+    <section id="shop" class="panel card" role="dialog" aria-label="Shop" hidden>
+      <div class="panel-head"><h2>SHOP</h2><span class="count">COINS <b id="shopCoins">0</b></span></div>
+      <div class="group"><h3>Limited time</h3><div id="shopLimited"></div></div>
+      <div class="group"><h3>Themes</h3><div id="shopSeasons"></div></div>
+      <div class="group"><h3>Bird colors</h3><div id="shopBirds"></div></div>
+      <div class="group"><h3>Special birds</h3><div id="shopSkins"></div></div>
+      <div class="group"><h3>Hats</h3><div id="shopHats"></div></div>
+      <button id="shopDone" class="btn" type="button">DONE</button>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  // Play field in canvas pixels (144 x 256, upscaled with nearest-neighbour)
+  const W = 144, GROUND = 38, H_MIN = 256, H_MAX = 340;
+  let H = 256, SKY_H = H - GROUND;
+  const GRAV = 780, FLAP = -200, MAX_FALL = 310;
+  const GAP_START = 80, GAP_MIN = 54, GAP_STEP = 1, COLW = 22, CAP_H = 6, CAP_X = 1, SPACING = 124, NODE = 14, BONUS_VALUE = 2, SPECIAL_VALUE = 5, SPECIAL_CHANCE = 0.18;
+  const BIRD_X = 40, BIRD_Y_MENU = 52;
+  let BIRD_Y = 112;
+  const HIT_R = 4.5, BIRD_SCALE = 0.85;
+  const BASE_SPEED = 86, SPEED_RAMP = 0.7, RAMP_CAP = 60;
+  const CYCLE_SECONDS = 80;
+  let HORIZON = SKY_H - 56;
+  const ARC = 112;
+  const STORE_KEY = 'happy-bird-best';
+  const SET_KEY = 'happy-bird-settings';
+
+  const $ = id => document.getElementById(id);
+  const stage = $('stage'), frame = $('frame'), canvas = $('scene'), ctx = canvas.getContext('2d');
+  const scoreEl = $('score'), readyEl = $('ready'), overEl = $('over');
+  const muteBtn = $('mute'), againBtn = $('again'), settingsBtn = $('settingsBtn');
+  const settingsEl = $('settings'), settingsDone = $('settingsDone');
+  const bgOptsEl = $('bgOpts'), bgNote = $('bgNote'), birdOptsEl = $('birdOpts'), birdNote = $('birdNote');
+  const seasonOptsEl = $('seasonOpts'), seasonNote = $('seasonNote'), musicOptsEl = $('musicOpts');
+  const shopLimited = $('shopLimited');
+  const skinOptsEl = $('skinOpts'), hatOptsEl = $('hatOpts'), shopSkins = $('shopSkins'), shopHats = $('shopHats');
+  const shopBtn = $('shopBtn'), shopEl = $('shop'), shopDone = $('shopDone'), shopCoins = $('shopCoins');
+  const shopSeasons = $('shopSeasons'), shopBirds = $('shopBirds'), walletN = $('walletN');
+  const reviveBtn = $('revive'), overShop = $('overShop'), runCoinsEl = $('runCoins'), resumeHint = $('resumeHint');
+  const bestReadyWrap = $('bestReadyWrap'), bestReady = $('bestReady');
+  const scoreEnd = $('scoreEnd'), bestEnd = $('bestEnd'), newBestEl = $('newBest');
+  const reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  ctx.imageSmoothingEnabled = false;
+  const APP = document.documentElement.classList.contains('app');
+  const bCanvas = $('birdLayer'), bctx = bCanvas.getContext('2d');
+  let BS = 1, shX = 0, shY = 0;
+
+  const cs = getComputedStyle(document.documentElement);
+  const tok = n => cs.getPropertyValue(n).trim();
+  const hexRgb = h => { const v = parseInt(h.replace('#', ''), 16); return [v >> 16 & 255, v >> 8 & 255, v & 255]; };
+  const S = (c, a) => a === undefined
+    ? 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'
+    : 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+  const INK = tok('--ink'), PAPER = hexRgb(tok('--paper'));
+
+  // Time of day keyframes: sky(5) hill(3) bamboo(3: mid, light, dark) sun ground(4: grass, grass dark, sand, sand dot) cloud(2)
+  const KEYS = [
+    { t: 0.00, c: ['#7fb6e6', '#a3cdeb', '#cfe3ec', '#ffd9b0', '#ffe8c8', '#b9dca6', '#8fc77c', '#6aae58',
+      '#78c044', '#bfe878', '#468f28', '#fff1b0', '#a6e266', '#7fc447', '#e6d496', '#d2bd76', '#ffffff', '#ffe3cf'], n: [0, 0.9] },
+    { t: 0.22, c: ['#50bccb', '#54bfcd', '#5ac3d0', '#64c8d3', '#6ecdd7', '#c8eeb4', '#7fd36e', '#5bbb4c',
+      '#6fbf3a', '#b6e86a', '#3f8a22', '#fff6c8', '#9be15d', '#73c13f', '#e2d38f', '#cfbd73', '#ffffff', '#d6eef4'], n: [0, 1] },
+    { t: 0.50, c: ['#2c3170', '#5b4a9a', '#d4708e', '#ff9f72', '#ffc78e', '#8a6a9e', '#5e4f86', '#3f3a6a',
+      '#5d9a3e', '#94c96a', '#33612a', '#ffd27a', '#7fae54', '#5f8f3f', '#c9a878', '#b08f62', '#ffc2a6', '#e08f8f'], n: [0.3, 0.8] },
+    { t: 0.68, c: ['#0b1030', '#121a44', '#1b2856', '#243766', '#2f4676', '#25365e', '#1b2a4c', '#132039',
+      '#2f5a3a', '#4f8a5c', '#1a3522', '#fff1b0', '#35603f', '#284b31', '#5e5a52', '#4e4a44', '#3a4a7a', '#2a375e'], n: [1, 0.5] },
+    { t: 0.80, c: ['#0b1030', '#121a44', '#1b2856', '#243766', '#2f4676', '#25365e', '#1b2a4c', '#132039',
+      '#2f5a3a', '#4f8a5c', '#1a3522', '#fff1b0', '#35603f', '#284b31', '#5e5a52', '#4e4a44', '#3a4a7a', '#2a375e'], n: [1, 0.5] },
+    { t: 0.92, c: ['#3a3f7a', '#7a6aa8', '#e48fa0', '#ffb48a', '#ffd8a8', '#a08cb0', '#7a6c9a', '#56507a',
+      '#64a446', '#9fd273', '#376a2c', '#ffe0a0', '#8cbc5a', '#6a9c44', '#d6b98a', '#bea06e', '#ffd0c0', '#e8a8b0'], n: [0.4, 0.8] }
+  ].map(k => ({ t: k.t, c: k.c.map(hexRgb), n: k.n }));
+
+  let P = null;
+  const DAY = KEYS[1].c;
+  function computePalette() {
+    let i = 0;
+    for (let j = 0; j < KEYS.length; j++) if (tod >= KEYS[j].t) i = j;
+    const a = KEYS[i], b = KEYS[(i + 1) % KEYS.length];
+    const t1 = i + 1 < KEYS.length ? b.t : 1;
+    let f = (tod - a.t) / (t1 - a.t);
+    f = f * f * (3 - 2 * f);
+    const c = a.c.map((ca, idx) => {
+      const cb = b.c[idx];
+      return [Math.round(ca[0] + (cb[0] - ca[0]) * f), Math.round(ca[1] + (cb[1] - ca[1]) * f), Math.round(ca[2] + (cb[2] - ca[2]) * f)];
+    });
+    const n = a.n.map((v, idx) => v + (b.n[idx] - v) * f);
+    const th = THEME.c;
+    if (th) for (const idx in th) {
+      const tc = th[idx], b0 = c[idx], d0 = DAY[idx];
+      c[idx] = [0, 1, 2].map(k => Math.min(255, Math.round(tc[k] * (b0[k] + 8) / (d0[k] + 8))));
+    }
+    P = {
+      sky: c.slice(0, 5), hill: c.slice(5, 8).map(x => S(x)), col: c.slice(8, 11).map(x => S(x)), sun: c[11],
+      ground: c.slice(12, 16).map(x => S(x)), cloud: c.slice(16, 18).map(x => S(x)), star: n[0], cloudA: n[1]
+    };
+    if (THEME.stars) P.star = Math.max(P.star, THEME.stars);
+    if (THEME.cloudMul !== undefined) P.cloudA *= THEME.cloudMul;
+  }
+
+  // Settings data
+  const BG_OPTS = [['cycle', 'Cycle'], ['morning', 'Morning'], ['day', 'Day'], ['dusk', 'Dusk'], ['night', 'Night']];
+  const BG_NOTES = {
+    cycle: 'Moves from morning to night as you play.',
+    morning: 'Always morning.', day: 'Always daytime.', dusk: 'Always dusk.', night: 'Always night.'
+  };
+  const FIXED_TOD = { morning: 0.05, day: 0.22, dusk: 0.52, night: 0.74 };
+  const BIRDS = [
+    { name: 'Sunny',  body: '#ffd23f', belly: '#fff3b0', accent: '#f08a24', dark: '#b85c12', beak: '#ff6a3d' },
+    { name: 'Cherry', body: '#ef4b3f', belly: '#ffd2c2', accent: '#ffd23f', dark: '#c0901a', beak: '#ffb43b' },
+    { name: 'Sky',    body: '#6cc6f5', belly: '#e2f5ff', accent: '#2a78d0', dark: '#1a4f94', beak: '#ffb43b' },
+    { name: 'Leaf',   body: '#8ee06a', belly: '#e6ffd0', accent: '#2f9e44', dark: '#1d6a2c', beak: '#ff9f43' },
+    { name: 'Grape',  body: '#b48cf2', belly: '#efe4ff', accent: '#6a3fc4', dark: '#45288a', beak: '#ffc247' },
+    { name: 'Peach',  body: '#ffb0b8', belly: '#fff0f0', accent: '#e8467a', dark: '#a82c56', beak: '#ffb43b' },
+    { name: 'Snow',   body: '#f4f4f0', belly: '#ffffff', accent: '#8fa3b8', dark: '#5c6e82', beak: '#ff8a3d' },
+    { name: 'Ember',  body: '#ff8a3d', belly: '#ffe0c0', accent: '#c2301b', dark: '#7e1c10', beak: '#ffd36b' }
+  ];
+
+  const tc = o => {
+    const m = {};
+    const put = (arr, base) => { if (arr) arr.forEach((h, i) => { if (h) m[base + i] = hexRgb(h); }); };
+    put(o.sky, 0); put(o.hill, 5); put(o.col, 8); put(o.ground, 12); put(o.cloud, 16);
+    return m;
+  };
+  const THEMES = {
+    main: { name: 'Normal' },
+    spring: { name: 'Spring', fx: 'petal', deco: 'flowers',
+      c: tc({ hill: ['#e2f4cc', '#a4dc86', '#76c45c'] }) },
+    valentine: { name: "Valentine's", fx: 'heart',
+      c: tc({ hill: ['#ffdbe8', '#f7aac6', '#e57ea4'], col: ['#f27aa0', '#ffc0d4', '#c4466e'], ground: ['#ff9ec0', '#f27aa0', '#ffe6ee', '#f5c4d4'] }) },
+    lunar: { name: 'Lunar New Year', fx: 'sparkle', deco: 'lanterns',
+      c: tc({ col: ['#d8332a', '#ff7a5a', '#8e1a14'] }) },
+    autumn: { name: 'Autumn', fx: 'leaf',
+      c: tc({ hill: ['#f4cf8a', '#e2903e', '#c85e2a'], col: ['#a8b84a', '#d8e07a', '#6a7a2a'], ground: ['#d8a04a', '#b87a30', '#e4cc92', '#c9a86a'] }) },
+    halloween: { name: 'Halloween', fx: 'bat', deco: 'pumpkins',
+      c: tc({ sky: ['#3e2c60', '#5c3c80', '#a85a74', '#e07a4a', '#f0a050'], hill: ['#6e5e80', '#4c3c60', '#302644'],
+        col: ['#6c6c7c', '#9c9cac', '#40404e'], ground: ['#5c4c3c', '#4a3a2e', '#7c5c3c', '#5e4430'], cloud: ['#9a8aaa', '#6e5e80'] }) },
+    christmas: { name: 'Christmas', fx: 'snow', deco: 'xmas',
+      c: tc({ hill: ['#f2f8ff', '#d4e6f4', '#aecbe2'], col: ['#3f9a4a', '#7cd08a', '#1f6a2c'], ground: ['#ffffff', '#d8e6f2', '#eef5fb', '#cddbe8'] }) },
+    beach: { name: 'Beach',
+      c: tc({ sky: ['#2aa8e8', '#40b8ee', '#62c8f2', '#86d8f4', '#a8e6f6'], hill: ['#7fd8e8', '#3fb0d8', '#f2dc9a'],
+        col: ['#3fc0b0', '#8ef0e0', '#1f8a80'], ground: ['#f2dc9a', '#e2c878', '#f6e4b0', '#e2c888'] }) },
+    underwater: { name: 'Underwater', fx: 'bubble', cloudMul: 0.35,
+      c: tc({ sky: ['#0a4a7a', '#0f5a8a', '#1a6e9a', '#2a84aa', '#3a98b8'], hill: ['#2a8a7a', '#1e6e62', '#145448'],
+        col: ['#ff7a8a', '#ffb0b8', '#c84a5a'], ground: ['#e6d49a', '#cdb878', '#d8c48a', '#bea864'], cloud: ['#6ac0e0', '#4aa0c8'] }) },
+    candy: { name: 'Candy', fx: 'sprinkle', deco: 'candy',
+      c: tc({ sky: ['#ffb8d8', '#ffc8e0', '#ffd8ea', '#ffe4f0', '#fff0f6'], hill: ['#ffd0f0', '#c8a0ff', '#ff9ec8'],
+        col: ['#fff6fa', '#ffffff', '#e8d0e0'], ground: ['#ff9ec8', '#ff7ab0', '#fff0f6', '#ffd0e4'] }) },
+    space: { name: 'Space', fx: 'stardust', deco: 'planet', stars: 0.9, cloudMul: 0.2,
+      c: tc({ sky: ['#0a0820', '#141040', '#20185a', '#2a2070', '#3a2a80'], hill: ['#4a3a7a', '#3a2a6a', '#2a1e52'],
+        col: ['#7a88a8', '#b8c4e0', '#4a5470'], ground: ['#6a5a9a', '#56468a', '#3a2e60', '#2e2450'], cloud: ['#3a2a6a', '#2a1e52'] }) }
+  };
+  const SEASONS = [['auto', 'Auto'], ['main', 'Normal'], ['spring', 'Spring'], ['valentine', "Valentine's"], ['lunar', 'Lunar New Year'],
+    ['autumn', 'Autumn'], ['halloween', 'Halloween'], ['christmas', 'Christmas'],
+    ['beach', 'Beach'], ['underwater', 'Underwater'], ['candy', 'Candy'], ['space', 'Space']];
+  function autoSeason(d) {
+    const m = d.getMonth() + 1, day = d.getDate();
+    if (m === 12) return 'christmas';
+    if (m === 10 && day >= 15) return 'halloween';
+    if (m === 2 && day >= 7 && day <= 14) return 'valentine';
+    if ((m === 1 && day >= 20) || (m === 2 && day <= 20)) return 'lunar';
+    if (m >= 3 && m <= 5) return 'spring';
+    if (m >= 9 && m <= 11) return 'autumn';
+    return 'main';
+  }
+  let seasonMode = 'auto', THEME = THEMES.main, themeKey = 'main';
+  let bgMode = 'cycle', birdMode = 'random', birdIdx = -1, musicOn = false, skinMode = 'none', hatMode = 'none';
+  try {
+    const s = JSON.parse(localStorage.getItem(SET_KEY) || '{}');
+    if (BG_OPTS.some(o => o[0] === s.bg)) bgMode = s.bg;
+    if (SEASONS.some(o => o[0] === s.season)) seasonMode = s.season;
+    if (typeof s.music === 'boolean') musicOn = s.music;
+    if (typeof s.skin === 'string') skinMode = s.skin;
+    if (typeof s.hat === 'string') hatMode = s.hat;
+    if (s.bird === 'random' || (Number.isInteger(s.bird) && s.bird >= 0 && s.bird < BIRDS.length)) birdMode = s.bird;
+  } catch (e) {}
+  // Special birds replace the color; hats sit on top of any bird. Coordinates are bird-grid cells.
+  const SKINS = {
+    ninja: { name: 'Ninja', price: 100, pal: { body: '#34344a', accent: '#55556e', dark: '#1e1e2c', beak: '#ffb43b' },
+      extra: [[4, 1, 'r'], [5, 1, 'r'], [6, 1, 'r'], [7, 1, 'r'], [8, 1, 'r'], [9, 1, 'r'], [10, 1, 'r'], [3, 2, 'r'], [2, 2, 'r'], [1, 3, 'r']],
+      xpal: { r: '#e8322a' } },
+    robot: { name: 'Robot', price: 120, pal: { body: '#b8c4d0', accent: '#7a8a9a', dark: '#4a5866', beak: '#ffb43b', eye: '#7af0ff' },
+      extra: [[7, -1, 'k'], [7, -2, 'k'], [7, -3, 'r'], [7, 7, 's'], [8, 8, 's']], xpal: { k: '#2b1d14', r: '#ff4a4a', s: '#6a7684' } },
+    ghost: { name: 'Ghost', price: 150, alpha: 0.78,
+      pal: { body: '#f2f2ff', accent: '#d0d4f0', dark: '#a8aed8', beak: '#d0d4f0', pupil: '#3a3a6a', ink: '#6a6aa0' } },
+    gold: { name: 'Gold', price: 200, pal: { body: '#ffd84a', accent: '#ffb000', dark: '#b87800', beak: '#fff2a0' },
+      extra: [[4, 2, 'W'], [3, 3, 'W'], [7, 8, 'W']], xpal: { W: '#fffbe0' } },
+    rainbow: { name: 'Rainbow', price: 250, rainbow: true },
+    pumpkin: { name: 'Pumpkin', price: 150, event: 'halloween', pal: { body: '#ff8a1a', accent: '#3a7a2a', dark: '#245a1a', beak: '#ffd23f' },
+      extra: [[7, -1, 'g'], [7, -2, 'g'], [8, -2, 'g']], xpal: { g: '#3a7a2a' } },
+    snowy: { name: 'Snowbird', price: 150, event: 'christmas', pal: { body: '#ffffff', accent: '#c8d8e8', dark: '#8aa0b8', beak: '#ff8a3d' },
+      extra: [[2, 5, 'r'], [3, 5, 'r'], [4, 5, 'r'], [5, 5, 'r'], [6, 5, 'r'], [7, 5, 'r'], [8, 5, 'r'], [2, 6, 'r'], [2, 7, 'R']],
+      xpal: { r: '#e8322a', R: '#a8201a' } },
+    cupid: { name: 'Cupid', price: 120, event: 'valentine', pal: { body: '#ffb0c8', accent: '#ffffff', dark: '#e8467a', beak: '#ffd23f' } },
+    dragon: { name: 'Dragon', price: 150, event: 'lunar', pal: { body: '#e8322a', accent: '#ffd23f', dark: '#a8201a', beak: '#ffd23f' },
+      extra: [[6, -1, 'y'], [8, -1, 'y'], [4, 0, 'y']], xpal: { y: '#ffd23f' } },
+    chick: { name: 'Spring chick', price: 120, event: 'spring', pal: { body: '#fff27a', accent: '#ffd23f', dark: '#d8a010', beak: '#ff8a3d' } }
+  };
+  const HATS = {
+    party: { name: 'Party hat', price: 30, x: 5, y: -5, art: ['..y..', '.kpk.', '.kck.', 'kpppk', 'kcpck'],
+      pal: { y: '#ffd23f', p: '#ff5a8a', c: '#4ac0ff' } },
+    bow: { name: 'Bow', price: 30, x: 5, y: -2, art: ['pp.pp', 'pPkPp', 'pp.pp'], pal: { p: '#ff5a8a', P: '#ffb0cc' } },
+    shades: { name: 'Sunglasses', price: 40, x: 4, y: 2, art: ['kkkkkkk', '..sWssk', '..ssssk'], pal: { s: '#1e1e2e', W: '#8a9ab8' } },
+    phones: { name: 'Headphones', price: 50, x: 3, y: -2,
+      art: ['...hhhh..', '..h....h.', '..h....h.', 'hhh......', 'hHh......', 'hhh......'], pal: { h: '#3a3a4a', H: '#ff5a8a' } },
+    tophat: { name: 'Top hat', price: 60, x: 5, y: -5, art: ['.ssss.', '.ssss.', '.ssss.', '.rrrr.', 'ssssss'], pal: { s: '#26263a', r: '#e8322a' } },
+    crown: { name: 'Crown', price: 80, x: 5, y: -3, art: ['y.y.y', 'yyyyy', 'yryby'], pal: { y: '#ffd23f', r: '#e8322a', b: '#4aa0ff' } },
+    wizard: { name: 'Wizard hat', price: 80, x: 4, y: -7,
+      art: ['...v...', '...v...', '..vvv..', '..vyv..', '.vvvvv.', '.vvvyv.', 'vvvvvvv'], pal: { v: '#6a3fc4', y: '#ffd23f' } },
+    witch: { name: 'Witch hat', price: 80, event: 'halloween', x: 4, y: -6,
+      art: ['.....s.', '....ss.', '...sss.', '..ssss.', '..pppp.', 'sssssss'], pal: { s: '#26203a', p: '#8a4ac4' } },
+    santa: { name: 'Santa hat', price: 80, event: 'christmas', x: 5, y: -5, art: ['...rW', '..rr.', '.rrr.', 'rrrr.', 'WWWWW'],
+      pal: { r: '#e8322a', W: '#ffffff' } },
+    hearts: { name: 'Heart glasses', price: 60, event: 'valentine', x: 4, y: 2, art: ['kkkkkkk', '..pPppk', '..pppk.'],
+      pal: { p: '#ff5a8a', P: '#ffb0cc' } },
+    bunny: { name: 'Bunny ears', price: 60, event: 'spring', x: 7, y: -5, art: ['W.W', 'P.P', 'P.P', 'W.W', 'W.W'],
+      pal: { W: '#ffffff', P: '#ffb0cc' } }
+  };
+  // Holiday windows (month, day), inclusive; Christmas wraps into January
+  const EVENTS = {
+    halloween: { name: 'Halloween', from: [10, 1], to: [11, 7] },
+    christmas: { name: 'Christmas', from: [12, 1], to: [1, 6] },
+    lunar: { name: 'Lunar New Year', from: [1, 20], to: [2, 20] },
+    valentine: { name: "Valentine's", from: [2, 1], to: [2, 15] },
+    spring: { name: 'Spring festival', from: [3, 20], to: [4, 30] }
+  };
+  const THEME_EVENT = { halloween: 'halloween', christmas: 'christmas', valentine: 'valentine', lunar: 'lunar' };
+  function eventActive(e, d) {
+    const ev = EVENTS[e], v = (d.getMonth() + 1) * 100 + d.getDate();
+    const f = ev.from[0] * 100 + ev.from[1], t = ev.to[0] * 100 + ev.to[1];
+    return f <= t ? v >= f && v <= t : v >= f || v <= t;
+  }
+  function eventEndLabel(e, d) {
+    const ev = EVENTS[e], v = (d.getMonth() + 1) * 100 + d.getDate();
+    const f = ev.from[0] * 100 + ev.from[1], t = ev.to[0] * 100 + ev.to[1];
+    const y = d.getFullYear() + (f > t && v >= f ? 1 : 0);
+    return new Date(y, ev.to[0] - 1, ev.to[1]).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  // Trusted time: limited items can only be bought after the date is confirmed online
+  let netTime = null, timeSyncing = false;
+  const trustedNow = () => netTime ? new Date(netTime.ms + (performance.now() - netTime.at)) : null;
+  const TIME_SOURCES = [
+    ['https://worldtimeapi.org/api/timezone/Etc/UTC', j => j.unixtime * 1000],
+    ['https://timeapi.io/api/Time/current/zone?timeZone=UTC', j => Date.UTC(j.year, j.month - 1, j.day, j.hour, j.minute, j.seconds)]
+  ];
+  async function syncTime() {
+    if (timeSyncing) return;
+    if (navigator.onLine === false) { netTime = null; onTimeChange(); return; }
+    timeSyncing = true; onTimeChange();
+    let got = null;
+    for (const src of TIME_SOURCES) {
+      try {
+        const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = setTimeout(() => { if (ctl) ctl.abort(); }, 5000);
+        const r = await fetch(src[0], { cache: 'no-store', signal: ctl ? ctl.signal : undefined });
+        clearTimeout(timer);
+        if (!r.ok) continue;
+        const ms = src[1](await r.json());
+        if (isFinite(ms) && ms > 1.6e12) { got = ms; break; }
+      } catch (e) {}
+    }
+    netTime = got ? { ms: got, at: performance.now() } : null;
+    timeSyncing = false;
+    onTimeChange();
+  }
+  const canBuyLimited = e => navigator.onLine !== false && netTime && performance.now() - netTime.at < 30 * 60 * 1000 && eventActive(e, trustedNow());
+  function onTimeChange() {
+    if (seasonMode === 'auto') applySeason();
+    if (typeof shopOpen !== 'undefined' && shopOpen) renderShop();
+    if (typeof syncSettingsUI === 'function' && skinBtns.length) syncSettingsUI();
+  }
+  const SEASON_PRICE = { spring: 60, autumn: 60, valentine: 80, lunar: 100, halloween: 120, christmas: 120, beach: 80, underwater: 100, candy: 100, space: 150 };
+  const BIRD_PRICE = [0, 15, 15, 20, 25, 25, 35, 40];
+  const SHOP_KEY = 'happy-bird-shop';
+  const wallet = { coins: 0, seasons: [], birds: [0], skins: [], hats: [] };
+  try {
+    const w = JSON.parse(localStorage.getItem(SHOP_KEY) || 'null');
+    if (w) {
+      wallet.coins = Math.max(0, w.coins | 0);
+      wallet.seasons = Array.isArray(w.seasons) ? w.seasons.filter(k => SEASON_PRICE[k]) : [];
+      wallet.birds = Array.isArray(w.birds) ? w.birds.filter(i => Number.isInteger(i) && i >= 0 && i < BIRDS.length) : [0];
+      if (!wallet.birds.includes(0)) wallet.birds.unshift(0);
+      wallet.skins = Array.isArray(w.skins) ? w.skins.filter(k => SKINS[k]) : [];
+      wallet.hats = Array.isArray(w.hats) ? w.hats.filter(k => HATS[k]) : [];
+    }
+  } catch (e) {}
+  const saveWallet = () => { try { localStorage.setItem(SHOP_KEY, JSON.stringify(wallet)); } catch (e) {} };
+  if (skinMode !== 'none' && !wallet.skins.includes(skinMode)) skinMode = 'none';
+  if (hatMode !== 'none' && !wallet.hats.includes(hatMode)) hatMode = 'none';
+  const ownsSeason = k => k === 'auto' || k === 'main' || wallet.seasons.includes(k);
+  const saveSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify({ bg: bgMode, bird: birdMode, season: seasonMode, music: musicOn, skin: skinMode, hat: hatMode })); } catch (e) {} };
+
+  // Bird sprite: chunky 13x10 grid drawn at 2x, so each sprite pixel is 2 canvas pixels
+  const GW = 13, GH = 10, PX = 2;
+  const BODY = [
+    '...kk.kkkk...',
+    '..kaakbbbbk..',
+    '.kkbbbwwwwbk.',
+    'kabbbbwwwpbk.',
+    'kabbbbwwwpbk.',
+    '.kbbbbbbbkkkk',
+    '.kbbbbbbkyyyk',
+    '.kbbbbbbbkyk.',
+    '..kbbbbbbbk..',
+    '...kkkkkkk...'
+  ];
+  const WINGS = {
+    up:   [[3,3,'d'],[4,3,'d'],[5,3,'d'],[2,4,'d'],[3,4,'a'],[4,4,'a'],[5,4,'d'],[3,5,'d'],[4,5,'d']],
+    mid:  [[2,5,'d'],[3,5,'d'],[4,5,'d'],[5,5,'d'],[2,6,'d'],[3,6,'a'],[4,6,'a'],[5,6,'d'],[3,7,'d'],[4,7,'d']],
+    down: [[3,6,'d'],[4,6,'d'],[5,6,'d'],[3,7,'d'],[4,7,'a'],[5,7,'d'],[4,8,'d'],[5,8,'d']]
+  };
+  const PADX = 2, PADT = 7, PADB = 1;
+  // look = { pal, extra, xpal, hat }
+  function buildBird(look, wingKey) {
+    const CW = GW + PADX * 2, CH = GH + PADT + PADB;
+    const cells = Array.from({ length: CH }, () => new Array(CW).fill(null));
+    const put = (x, y, col) => { const X = x + PADX, Y = y + PADT; if (X >= 0 && X < CW && Y >= 0 && Y < CH) cells[Y][X] = col; };
+    const pal = look.pal;
+    const map = { k: pal.ink || INK, b: pal.body, a: pal.accent, d: pal.dark, y: pal.beak, w: pal.eye || '#ffffff', p: pal.pupil || INK };
+    const g = BODY.map(r => r.split(''));
+    WINGS[wingKey].forEach(q => { g[q[1]][q[0]] = q[2]; });
+    g.forEach((row, y) => row.forEach((ch, x) => { if (ch !== '.') put(x, y, map[ch]); }));
+    (look.extra || []).forEach(e => put(e[0], e[1], look.xpal[e[2]]));
+    if (look.hat) {
+      const h = look.hat, hc = [];
+      h.art.forEach((row, j) => row.split('').forEach((ch, i) => {
+        if (ch === '.') return;
+        put(h.x + i, h.y + j, ch === 'k' ? INK : h.pal[ch]);
+        hc.push([h.x + i, h.y + j]);
+      }));
+      hc.forEach(q => [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(o => {
+        const X = q[0] + o[0] + PADX, Y = q[1] + o[1] + PADT;
+        if (X >= 0 && X < CW && Y >= 0 && Y < CH && !cells[Y][X]) cells[Y][X] = INK;
+      }));
+    }
+    const c = document.createElement('canvas');
+    c.width = CW * PX; c.height = CH * PX;
+    const x2 = c.getContext('2d');
+    for (let y = 0; y < CH; y++) for (let x = 0; x < CW; x++) {
+      if (!cells[y][x]) continue;
+      x2.fillStyle = cells[y][x];
+      x2.fillRect(x * PX, y * PX, PX, PX);
+    }
+    return c;
+  }
+  function skinLook(id, hue) {
+    const sk = SKINS[id], h = hue || 0;
+    const pal = sk.rainbow
+      ? { body: 'hsl(' + h + ',85%,62%)', accent: 'hsl(' + (h + 40) + ',85%,50%)', dark: 'hsl(' + (h + 40) + ',70%,34%)', beak: '#ffb43b' }
+      : sk.pal;
+    return { pal, extra: sk.extra, xpal: sk.xpal };
+  }
+  function currentLook(hue) {
+    const look = skinMode !== 'none' && SKINS[skinMode] ? skinLook(skinMode, hue) : { pal: BIRDS[birdIdx < 0 ? 0 : birdIdx] };
+    look.hat = hatMode !== 'none' ? HATS[hatMode] : null;
+    return look;
+  }
+  const previewURL = look => buildBird(look, 'mid').toDataURL();
+  const spriteCache = {};
+  function birdSprite(wingKey) {
+    const sk = skinMode !== 'none' ? SKINS[skinMode] : null;
+    const hue = sk && sk.rainbow ? (Math.floor(t * 5) % 12) * 30 : 0;
+    const key = [skinMode, birdIdx, hatMode, wingKey, hue].join('|');
+    if (!spriteCache[key]) spriteCache[key] = buildBird(currentLook(hue), wingKey);
+    return spriteCache[key];
+  }
+
+  // Stars and clouds
+  let stars = [];
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  function genStars() {
+    stars = [];
+    for (let i = 0; i < 40; i++) stars.push({ x: Math.floor(rnd() * W), y: Math.floor(rnd() * SKY_H * 0.55), p: rnd() * 6.28 });
+  }
+  genStars();
+  const clouds = [{ x: 10, y: 40, s: 1 }, { x: 70, y: 86, s: 0.75 }, { x: 120, y: 26, s: 0.9 }, { x: 170, y: 118, s: 0.7 }];
+  const sandDots = [];
+  for (let i = 0; i < 26; i++) sandDots.push({ x: Math.floor(rnd() * W), y: Math.floor(10 + rnd() * (GROUND - 13)) });
+
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const mod = (a, n) => ((a % n) + n) % n;
+
+  // State
+  let state = 'ready';            // ready | playing | dead
+  let bird = { y: BIRD_Y, vy: 0, rot: 0, wing: 0 };
+  let cols = [], prevGy = null, spawnCount = 0, bonus = [], runCoins = 0, revives = 0;
+  let score = 0, best = 0, isNew = false;
+  let t = 0, scroll = 0, autoFlap = 0, tod = 0.22;
+  let shake = 0, flash = 0, deadAt = 0, panelShown = false, settingsOpen = false, shopOpen = false;
+
+  try { best = parseInt(localStorage.getItem(STORE_KEY), 10) || 0; } catch (e) { best = 0; }
+  const saveBest = () => { try { localStorage.setItem(STORE_KEY, String(best)); } catch (e) {} };
+
+  function applyBg() { if (bgMode !== 'cycle') tod = FIXED_TOD[bgMode]; }
+  function pickBird() {
+    const own = wallet.birds;
+    if (birdMode === 'random') {
+      let i;
+      do { i = own[Math.floor(Math.random() * own.length)]; } while (i === birdIdx && own.length > 1);
+      birdIdx = i;
+    } else {
+      birdIdx = own.includes(birdMode) ? birdMode : 0;
+    }
+  }
+
+  // Sound (starts only after a tap or key press)
+  let actx = null, muted = false;
+  function audio() {
+    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
+    if (actx && actx.state === 'suspended') actx.resume().catch(() => {});
+    return actx;
+  }
+  function tone(f0, f1, dur, type, vol, delay) {
+    if (muted) return;
+    const a = audio();
+    if (!a) return;
+    try {
+      const t0 = a.currentTime + (delay || 0);
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t0);
+      o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    } catch (e) {}
+  }
+
+  // Short noise burst for the crash
+  function noise(dur, vol) {
+    if (muted) return;
+    const a = audio();
+    if (!a) return;
+    try {
+      const n = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      const src = a.createBufferSource(), g = a.createGain(), f = a.createBiquadFilter();
+      f.type = 'lowpass'; f.frequency.value = 1400;
+      g.gain.value = vol;
+      src.buffer = buf; src.connect(f); f.connect(g); g.connect(a.destination);
+      src.start();
+    } catch (e) {}
+  }
+
+  // Background music: an original 8-bar chiptune loop, scheduled ahead with Web Audio
+  const EIGHTH = 60 / 140 / 2;
+  const MEL = [0, 4, 7, 4, 12, 7, 4, 7,  5, 9, 12, 9, 5, 9, 12, 9,  7, 11, 14, 11, 7, 11, 14, 7,  4, 7, 12, 7, 4, null, 0, null,
+    -3, 0, 4, 0, 9, 4, 0, 4,  5, 9, 12, 9, 14, 12, 9, 5,  7, null, 7, 9, 11, null, 14, null,  12, null, 7, null, 4, null, null, null];
+  const BASS = [0, 5, 7, 0, -3, 5, 7, 0];
+  let musicTimer = null, nextNote = 0, step = 0;
+  function mnote(freq, at, dur, type, vol) {
+    const a = actx;
+    if (!a || muted) return;
+    try {
+      const o = a.createOscillator(), g = a.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, at);
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(vol, at + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(at); o.stop(at + dur + 0.02);
+    } catch (e) {}
+  }
+  function scheduleMusic() {
+    const a = actx;
+    if (!a) return;
+    if (nextNote < a.currentTime) nextNote = a.currentTime + 0.05;
+    while (nextNote < a.currentTime + 0.3) {
+      const m = MEL[step % 64];
+      if (m !== null) mnote(523.25 * Math.pow(2, m / 12), nextNote, EIGHTH * 0.85, 'square', 0.022);
+      if (step % 2 === 0) {
+        const r = BASS[Math.floor(step / 8) % 8] + (step % 4 === 2 ? 12 : 0);
+        mnote(130.81 * Math.pow(2, r / 12), nextNote, EIGHTH * 1.7, 'triangle', 0.06);
+      }
+      nextNote += EIGHTH; step++;
+    }
+  }
+  function startMusic() {
+    if (!musicOn || musicTimer || document.hidden) return;
+    const a = audio();
+    if (!a) return;
+    nextNote = a.currentTime + 0.05; step = 0;
+    musicTimer = setInterval(scheduleMusic, 60);
+    scheduleMusic();
+  }
+  function stopMusic() { clearInterval(musicTimer); musicTimer = null; }
+
+  // Columns
+  function spawn(x) {
+    const gap = 2 * Math.round(Math.max(GAP_MIN, GAP_START - spawnCount * GAP_STEP) / 2);
+    spawnCount++;
+    const lo = gap / 2 + 26, hi = SKY_H - 22 - gap / 2;
+    const gy = prevGy === null ? (lo + hi) / 2 + rand(-16, 16) : clamp(prevGy + rand(-52, 52), lo, hi);
+    prevGy = gy;
+    const prev = cols[cols.length - 1];
+    if (prev) bonus.push({ x: (prev.x + x) / 2 + COLW / 2, y: Math.round(clamp((prev.gy + gy) / 2 + rand(-26, 26), 22, SKY_H - 22)), taken: false, special: Math.random() < SPECIAL_CHANCE });
+    cols.push({ x, gy: Math.round(gy), gap, scored: false });
+  }
+  function fillCols() {
+    while (cols.length === 0 || cols[cols.length - 1].x < W + SPACING) {
+      spawn(cols.length === 0 ? W + 10 : cols[cols.length - 1].x + SPACING);
+    }
+  }
+  function circleRect(cx, cy, r, rx, ry, rw, rh) {
+    const nx = clamp(cx, rx, rx + rw), ny = clamp(cy, ry, ry + rh);
+    const dx = cx - nx, dy = cy - ny;
+    return dx * dx + dy * dy < r * r;
+  }
+  function hitsColumn(c) {
+    const top = c.gy - c.gap / 2, bot = c.gy + c.gap / 2;
+    return circleRect(BIRD_X, bird.y, HIT_R, c.x, -40, COLW, top + 40) ||
+           circleRect(BIRD_X, bird.y, HIT_R, c.x - CAP_X, top - CAP_H, COLW + 2 * CAP_X, CAP_H) ||
+           circleRect(BIRD_X, bird.y, HIT_R, c.x, bot, COLW, H) ||
+           circleRect(BIRD_X, bird.y, HIT_R, c.x - CAP_X, bot, COLW + 2 * CAP_X, CAP_H);
+  }
+
+  // Flow
+  function syncUI() {
+    const busy = state === 'playing' || state === 'revive';
+    settingsBtn.hidden = busy; shopBtn.hidden = busy;
+  }
+  function updateWallet() { walletN.textContent = wallet.coins; shopCoins.textContent = wallet.coins; }
+  function addCoins(n) { wallet.coins += n; runCoins += n; saveWallet(); updateWallet(); }
+  const reviveCost = () => 10 * Math.pow(2, revives);
+  function doRevive() {
+    const cost = reviveCost();
+    if (state !== 'dead' || wallet.coins < cost) return;
+    wallet.coins -= cost; revives++; saveWallet(); updateWallet();
+    cols = cols.filter(c => c.x + COLW + CAP_X < BIRD_X - 14 || c.x - CAP_X > BIRD_X + 70);
+    bonus = bonus.filter(b => Math.abs(b.x - BIRD_X) > 20);
+    fillCols();
+    const next = cols.find(c => c.x > BIRD_X);
+    bird.y = next ? next.gy : BIRD_Y; bird.vy = 0; bird.rot = 0;
+    state = 'revive'; panelShown = false; overEl.hidden = true;
+    resumeHint.textContent = 'Tap to keep flying'; resumeHint.hidden = false;
+    syncUI();
+    tone(660, 1320, 0.25, 'triangle', 0.06);
+  }
+  function reset() {
+    state = 'ready';
+    bird = { y: settingsOpen || shopOpen ? BIRD_Y_MENU : BIRD_Y, vy: 0, rot: 0, wing: 0 };
+    cols = []; bonus = []; prevGy = null; spawnCount = 0; runCoins = 0; revives = 0; fillCols();
+    resumeHint.hidden = true;
+    score = 0; isNew = false; panelShown = false; autoFlap = 0;
+    pickBird();
+    scoreEl.textContent = '0'; scoreEl.hidden = true;
+    overEl.hidden = true; readyEl.hidden = settingsOpen || shopOpen;
+    bestReadyWrap.hidden = best <= 0; bestReady.textContent = best;
+    syncUI();
+  }
+  function start() { state = 'playing'; readyEl.hidden = true; scoreEl.hidden = false; syncUI(); }
+  function flap() { bird.vy = FLAP; bird.wing = 1; tone(520, 900, 0.08, 'square', 0.05); }
+  function die() {
+    state = 'dead'; deadAt = performance.now(); curSpeed = 0;
+    bird.vy = -80;
+    flash = 1; shake = reduce ? 0 : 0.3;
+    if (score > best) { best = score; isNew = true; saveBest(); }
+    noise(0.14, 0.18);
+    tone(200, 60, 0.14, 'square', 0.08);
+    tone(880, 110, 0.6, 'triangle', 0.06, 0.28);
+    syncUI();
+  }
+  function showPanel() {
+    panelShown = true;
+    scoreEnd.textContent = score; bestEnd.textContent = best;
+    newBestEl.hidden = !isNew;
+    runCoinsEl.textContent = '+' + runCoins + ' coins this run, ' + wallet.coins + ' total';
+    const cost = reviveCost();
+    reviveBtn.textContent = 'REVIVE · ' + cost;
+    reviveBtn.disabled = wallet.coins < cost;
+    reviveBtn.title = reviveBtn.disabled ? 'You need ' + cost + ' coins' : '';
+    overEl.hidden = false;
+  }
+  function press() {
+    audio();
+    if (musicOn && !musicTimer) startMusic();
+    if (state === 'ready') { start(); flap(); }
+    else if (state === 'playing') flap();
+    else if (state === 'revive') { state = 'playing'; resumeHint.hidden = true; scoreEl.hidden = false; syncUI(); flap(); }
+    else if (performance.now() - deadAt > 650) reset();
+  }
+
+  // Settings menu
+  function mkBtn(cls, label) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = cls;
+    b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false');
+    if (label) b.textContent = label;
+    return b;
+  }
+  const bgBtns = BG_OPTS.map(o => {
+    const b = mkBtn('opt', o[1]);
+    b.addEventListener('click', () => { bgMode = o[0]; applyBg(); saveSettings(); syncSettingsUI(); });
+    bgOptsEl.appendChild(b);
+    return b;
+  });
+  function applySeason() {
+    if (!ownsSeason(seasonMode)) seasonMode = 'main';
+    let key = seasonMode;
+    if (seasonMode === 'auto') {
+      const now = trustedNow(), d = now || new Date();
+      key = autoSeason(d);
+      const ev = THEME_EVENT[key];
+      if (ev && !wallet.seasons.includes(key) && !(now && eventActive(ev, now))) {
+        const m = d.getMonth() + 1;
+        key = m >= 3 && m <= 5 ? 'spring' : m >= 9 && m <= 11 ? 'autumn' : 'main';
+      }
+    }
+    if (key !== themeKey || THEME !== THEMES[key]) parts = [];
+    themeKey = key;
+    THEME = THEMES[themeKey];
+  }
+  const seasonBtns = SEASONS.map(o => {
+    const b = mkBtn('opt', o[1]);
+    b.addEventListener('click', () => { seasonMode = o[0]; applySeason(); saveSettings(); syncSettingsUI(); });
+    seasonOptsEl.appendChild(b);
+    return b;
+  });
+  const musicBtns = [[false, 'Off'], [true, 'On']].map(o => {
+    const b = mkBtn('opt', o[1]);
+    b.addEventListener('click', () => {
+      musicOn = o[0]; saveSettings(); syncSettingsUI();
+      if (musicOn) startMusic(); else stopMusic();
+    });
+    musicOptsEl.appendChild(b);
+    return b;
+  });
+  const birdBtns = [];
+  (() => {
+    const r = mkBtn('opt', 'Random');
+    r.addEventListener('click', () => { birdMode = 'random'; skinMode = 'none'; pickBird(); saveSettings(); syncSettingsUI(); });
+    birdOptsEl.appendChild(r); birdBtns.push(r);
+    BIRDS.forEach((bd, i) => {
+      const b = mkBtn('sw');
+      b.setAttribute('aria-label', bd.name); b.title = bd.name;
+      b.style.background = 'linear-gradient(135deg, ' + bd.body + ' 55%, ' + bd.accent + ' 55%)';
+      b.addEventListener('click', () => { birdMode = i; skinMode = 'none'; pickBird(); saveSettings(); syncSettingsUI(); });
+      birdOptsEl.appendChild(b); birdBtns.push(b);
+    });
+  })();
+  function picBtn(look, label) {
+    const b = mkBtn('sw pic');
+    b.setAttribute('aria-label', label); b.title = label;
+    const im = new Image(); im.alt = ''; im.src = previewURL(look);
+    b.appendChild(im);
+    return b;
+  }
+  const skinBtns = [], hatBtns = [];
+  const SKIN_IDS = ['none'].concat(Object.keys(SKINS)), HAT_IDS = ['none'].concat(Object.keys(HATS));
+  SKIN_IDS.forEach(id => {
+    const b = id === 'none' ? mkBtn('opt', 'None') : picBtn(skinLook(id), SKINS[id].name);
+    b.addEventListener('click', () => { skinMode = id; saveSettings(); syncSettingsUI(); });
+    skinOptsEl.appendChild(b); skinBtns.push(b);
+  });
+  HAT_IDS.forEach(id => {
+    const b = id === 'none' ? mkBtn('opt', 'None') : picBtn({ pal: BIRDS[0], hat: HATS[id] }, HATS[id].name);
+    b.addEventListener('click', () => { hatMode = id; saveSettings(); syncSettingsUI(); });
+    hatOptsEl.appendChild(b); hatBtns.push(b);
+  });
+  function syncSettingsUI() {
+    skinBtns.forEach((b, i) => {
+      const id = SKIN_IDS[i];
+      b.setAttribute('aria-checked', String(skinMode === id));
+      b.disabled = id !== 'none' && !wallet.skins.includes(id);
+      b.hidden = id !== 'none' && !!SKINS[id].event && b.disabled;
+      b.title = (id === 'none' ? 'None' : SKINS[id].name) + (b.disabled ? ' (unlock in the shop)' : '');
+    });
+    hatBtns.forEach((b, i) => {
+      const id = HAT_IDS[i];
+      b.setAttribute('aria-checked', String(hatMode === id));
+      b.disabled = id !== 'none' && !wallet.hats.includes(id);
+      b.hidden = id !== 'none' && !!HATS[id].event && b.disabled;
+      b.title = (id === 'none' ? 'None' : HATS[id].name) + (b.disabled ? ' (unlock in the shop)' : '');
+    });
+    bgBtns.forEach((b, i) => b.setAttribute('aria-checked', String(BG_OPTS[i][0] === bgMode)));
+    birdBtns.forEach((b, i) => b.setAttribute('aria-checked', String(i === 0 ? birdMode === 'random' : birdMode === i - 1)));
+    bgNote.textContent = BG_NOTES[bgMode];
+    musicBtns.forEach((b, i) => b.setAttribute('aria-checked', String((i === 1) === musicOn)));
+    seasonBtns.forEach((b, i) => {
+      b.setAttribute('aria-checked', String(SEASONS[i][0] === seasonMode));
+      b.disabled = !ownsSeason(SEASONS[i][0]);
+      b.hidden = !!THEME_EVENT[SEASONS[i][0]] && !wallet.seasons.includes(SEASONS[i][0]);
+      b.title = b.disabled ? 'Unlock in the shop' : '';
+    });
+    birdBtns.forEach((b, i) => {
+      b.disabled = i > 0 && !wallet.birds.includes(i - 1);
+      b.title = (i > 0 ? BIRDS[i - 1].name : 'Random') + (b.disabled ? ' (unlock in the shop)' : '');
+    });
+    seasonNote.textContent = seasonMode === 'auto'
+      ? 'Follows today\'s date. Right now: ' + THEMES[themeKey].name + (ownsSeason(themeKey) ? '.' : ', free while it lasts.')
+      : THEMES[seasonMode].name + ' all the time, from morning to night.';
+    birdNote.textContent = skinMode !== 'none' ? 'Using the ' + SKINS[skinMode].name + ' bird, so colors are off.' : birdMode === 'random' ? 'A different color every attempt.' : BIRDS[birdMode].name + ' bird.';
+  }
+  function openSettings() {
+    if (state === 'playing' || state === 'revive') return;
+    if (shopOpen) closeShop();
+    settingsOpen = true;
+    if (state === 'dead') reset();
+    settingsEl.hidden = false; readyEl.hidden = true; overEl.hidden = true;
+    settingsBtn.setAttribute('aria-expanded', 'true');
+    syncSettingsUI();
+    const cur = bgBtns.find(b => b.getAttribute('aria-checked') === 'true') || bgBtns[0];
+    try { cur.focus({ preventScroll: true }); } catch (e) {}
+  }
+  function closeSettings() {
+    settingsOpen = false;
+    settingsEl.hidden = true;
+    if (state === 'ready') readyEl.hidden = false;
+    settingsBtn.setAttribute('aria-expanded', 'false');
+    try { frame.focus({ preventScroll: true }); } catch (e) {}
+  }
+  settingsBtn.addEventListener('click', () => { if (settingsOpen) closeSettings(); else openSettings(); });
+  settingsDone.addEventListener('click', closeSettings);
+
+  function shopRow(name, price, owned, swatch, onBuy) {
+    const row = document.createElement('div');
+    row.className = 'shop-row';
+    if (swatch && swatch.img) { const im = new Image(); im.className = 'sw-img'; im.alt = ''; im.src = swatch.img; row.appendChild(im); }
+    else if (swatch) { const sw = document.createElement('span'); sw.className = 'sw-mini'; sw.style.background = swatch; row.appendChild(sw); }
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = name; row.appendChild(nm);
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'buy';
+    if (owned) { b.textContent = 'Owned'; b.disabled = true; }
+    else { b.textContent = 'Buy · ' + price; b.disabled = wallet.coins < price; b.addEventListener('click', onBuy); }
+    row.appendChild(b);
+    return row;
+  }
+  function renderLimited() {
+    shopLimited.textContent = '';
+    const note = txt => { const n = document.createElement('p'); n.className = 'shop-note'; n.textContent = txt; shopLimited.appendChild(n); };
+    const now = trustedNow();
+    if (navigator.onLine === false || !now) {
+      note(timeSyncing ? 'Checking today\'s date…' : 'Go online to see limited-time items. Anything you already own still works offline.');
+      return;
+    }
+    const active = Object.keys(EVENTS).filter(e => eventActive(e, now));
+    if (!active.length) { note('No holiday event right now. Check back on Halloween, Christmas, Lunar New Year, Valentine\'s and in spring.'); return; }
+    active.forEach(e => {
+      const h = document.createElement('p'); h.className = 'ev-head';
+      h.textContent = EVENTS[e].name + ' · until ' + eventEndLabel(e, now);
+      shopLimited.appendChild(h);
+      Object.keys(THEME_EVENT).filter(k => THEME_EVENT[k] === e).forEach(k => shopLimited.appendChild(
+        shopRow(THEMES[k].name + ' theme', SEASON_PRICE[k], wallet.seasons.includes(k), null, () => buy('season', k, SEASON_PRICE[k]))));
+      Object.keys(SKINS).filter(id => SKINS[id].event === e).forEach(id => shopLimited.appendChild(
+        shopRow(SKINS[id].name, SKINS[id].price, wallet.skins.includes(id), { img: previewURL(skinLook(id)) }, () => buy('skin', id, SKINS[id].price))));
+      Object.keys(HATS).filter(id => HATS[id].event === e).forEach(id => shopLimited.appendChild(
+        shopRow(HATS[id].name, HATS[id].price, wallet.hats.includes(id), { img: previewURL({ pal: BIRDS[0], hat: HATS[id] }) }, () => buy('hat', id, HATS[id].price))));
+    });
+  }
+  function renderShop() {
+    updateWallet();
+    renderLimited();
+    shopSeasons.textContent = ''; shopBirds.textContent = '';
+    Object.keys(SEASON_PRICE).filter(k => !THEME_EVENT[k]).forEach(k => shopSeasons.appendChild(
+      shopRow(THEMES[k].name, SEASON_PRICE[k], wallet.seasons.includes(k), null, () => buy('season', k, SEASON_PRICE[k]))));
+    BIRDS.forEach((bd, i) => shopBirds.appendChild(
+      shopRow(bd.name, BIRD_PRICE[i], wallet.birds.includes(i), { img: previewURL({ pal: bd }) }, () => buy('bird', i, BIRD_PRICE[i]))));
+    shopSkins.textContent = ''; shopHats.textContent = '';
+    Object.keys(SKINS).filter(id => !SKINS[id].event).forEach(id => shopSkins.appendChild(
+      shopRow(SKINS[id].name, SKINS[id].price, wallet.skins.includes(id), { img: previewURL(skinLook(id)) }, () => buy('skin', id, SKINS[id].price))));
+    Object.keys(HATS).filter(id => !HATS[id].event).forEach(id => shopHats.appendChild(
+      shopRow(HATS[id].name, HATS[id].price, wallet.hats.includes(id), { img: previewURL({ pal: BIRDS[0], hat: HATS[id] }) }, () => buy('hat', id, HATS[id].price))));
+  }
+  function buy(kind, id, price) {
+    if (wallet.coins < price) return;
+    const ev = kind === 'season' ? THEME_EVENT[id] : kind === 'skin' ? SKINS[id].event : kind === 'hat' ? HATS[id].event : null;
+    if (ev && !canBuyLimited(ev)) { renderShop(); syncTime(); return; }
+    wallet.coins -= price;
+    if (kind === 'season') { if (!wallet.seasons.includes(id)) wallet.seasons.push(id); seasonMode = id; applySeason(); }
+    else if (kind === 'skin') { if (!wallet.skins.includes(id)) wallet.skins.push(id); skinMode = id; }
+    else if (kind === 'hat') { if (!wallet.hats.includes(id)) wallet.hats.push(id); hatMode = id; }
+    else { if (!wallet.birds.includes(id)) wallet.birds.push(id); birdMode = id; skinMode = 'none'; pickBird(); }
+    saveWallet(); saveSettings(); renderShop(); syncSettingsUI();
+    tone(880, 1760, 0.15, 'square', 0.05);
+    try { shopDone.focus({ preventScroll: true }); } catch (e) {}
+  }
+  function openShop() {
+    if (state === 'playing' || state === 'revive') return;
+    if (settingsOpen) closeSettings();
+    shopOpen = true;
+    if (state === 'dead') reset();
+    renderShop();
+    syncTime();
+    shopEl.hidden = false; readyEl.hidden = true; overEl.hidden = true;
+    shopBtn.setAttribute('aria-expanded', 'true');
+    try { shopDone.focus({ preventScroll: true }); } catch (e) {}
+  }
+  function closeShop() {
+    shopOpen = false;
+    shopEl.hidden = true;
+    if (state === 'ready') readyEl.hidden = false;
+    shopBtn.setAttribute('aria-expanded', 'false');
+    try { frame.focus({ preventScroll: true }); } catch (e) {}
+  }
+  shopBtn.addEventListener('click', () => { if (shopOpen) closeShop(); else openShop(); });
+  shopDone.addEventListener('click', closeShop);
+  overShop.addEventListener('click', openShop);
+  reviveBtn.addEventListener('click', () => { audio(); doRevive(); try { frame.focus({ preventScroll: true }); } catch (e) {} });
+
+  // Input
+  frame.addEventListener('pointerdown', e => {
+    if (settingsOpen || shopOpen || e.target.closest('button')) return;
+    e.preventDefault();
+    try { frame.focus({ preventScroll: true }); } catch (err) {}
+    press();
+  });
+  window.addEventListener('keydown', e => {
+    if (settingsOpen) { if (e.code === 'Escape') { e.preventDefault(); closeSettings(); } return; }
+    if (shopOpen) { if (e.code === 'Escape') { e.preventDefault(); closeShop(); } return; }
+    if (e.code === 'KeyR' && state === 'dead' && panelShown) { e.preventDefault(); doRevive(); return; }
+    if (e.target && e.target.closest && e.target.closest('button')) return;
+    if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || (e.code === 'Enter' && state === 'dead')) {
+      e.preventDefault();
+      if (!e.repeat) press();
+    }
+  });
+  againBtn.addEventListener('click', () => {
+    audio(); reset();
+    readyEl.hidden = true; state = 'revive';
+    resumeHint.textContent = 'Tap to start'; resumeHint.hidden = false;
+    syncUI();
+    try { frame.focus({ preventScroll: true }); } catch (e) {}
+  });
+  $('overBack').addEventListener('click', () => { audio(); reset(); try { frame.focus({ preventScroll: true }); } catch (e) {} });
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    muteBtn.textContent = muted ? 'Sound off' : 'Sound on';
+    muteBtn.setAttribute('aria-pressed', String(muted));
+    if (!muted) audio();
+    try { frame.focus({ preventScroll: true }); } catch (e) {}
+  });
+
+  // Seasonal particles
+  let parts = [], partAcc = 0, curSpeed = 24;
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const FX = {
+    snow:    { rate: 22, make: () => ({ x: rand(0, W + 30), y: -3, vx: rand(-6, -2), vy: rand(14, 24), s: Math.random() < 0.3 ? 2 : 1, c: '#ffffff' }) },
+    petal:   { rate: 6, make: () => ({ x: rand(0, W + 30), y: -3, vx: rand(-9, -4), vy: rand(10, 16), s: 2, h: 1, c: pick(['#ffb0cc', '#ffd6e4']) }) },
+    leaf:    { rate: 5, make: () => ({ x: rand(0, W + 30), y: -3, vx: rand(-10, -4), vy: rand(12, 20), s: 2, c: pick(['#e8742a', '#d8452a', '#f2b03a']) }) },
+    heart:   { rate: 1.6, make: () => ({ x: rand(0, W), y: SKY_H - rand(0, 20), vx: 0, vy: rand(-12, -7), kind: 'heart', c: pick(['#ff6a9a', '#ff9ec0']) }) },
+    bat:     { rate: 0.6, make: () => ({ x: W + 6, y: rand(16, 120), vx: rand(-40, -28), vy: 0, kind: 'bat', c: '#1a1020' }) },
+    sparkle: { rate: 6, make: () => ({ x: rand(0, W + 30), y: -3, vx: rand(-4, -1), vy: rand(6, 10), s: 1, kind: 'spark', c: '#ffd23f' }) },
+    bubble:  { rate: 3, make: () => ({ x: rand(0, W + 20), y: SKY_H - 1, vx: rand(-2, 2), vy: rand(-16, -9), kind: 'bubble', c: '#d8f4ff' }) },
+    sprinkle: { rate: 8, make: () => ({ x: rand(0, W + 30), y: -3, vx: rand(-8, -3), vy: rand(14, 22), s: 2, h: 1, c: pick(['#ff4a8a', '#4ac0ff', '#ffd23f', '#7ad86a', '#b48cf2']) }) },
+    stardust: { rate: 5, make: () => ({ x: rand(0, W + 30), y: -3, vx: rand(-14, -6), vy: rand(4, 9), s: 1, kind: 'spark', c: '#ffffff' }) }
+  };
+  function updateParts(dt) {
+    const fx = THEME.fx && FX[THEME.fx];
+    if (fx && !reduce) {
+      partAcc += dt * fx.rate;
+      while (partAcc >= 1) {
+        partAcc -= 1;
+        if (parts.length < 90) { const p = fx.make(); p.ph = Math.random() * 6.28; parts.push(p); }
+      }
+    }
+    const drift = curSpeed * 0.3;
+    for (const p of parts) {
+      p.ph += dt * 3;
+      if (p.life !== undefined) p.life -= dt;
+      const bat = p.kind === 'bat';
+      p.x += (p.vx - drift + (bat ? 0 : Math.sin(p.ph) * 6)) * dt;
+      p.y += (p.vy + (bat ? Math.sin(p.ph * 2) * 10 : 0)) * dt;
+    }
+    parts = parts.filter(p => (p.life === undefined || p.life > 0) && p.x > -10 && p.x < W + 40 && p.y < SKY_H + 2 && p.y > -10);
+  }
+  function drawParts() {
+    for (const p of parts) {
+      const x = Math.round(p.x), y = Math.round(p.y);
+      ctx.fillStyle = p.c;
+      if (p.kind === 'heart') {
+        ctx.fillRect(x, y, 2, 1); ctx.fillRect(x + 3, y, 2, 1); ctx.fillRect(x, y + 1, 5, 1);
+        ctx.fillRect(x + 1, y + 2, 3, 1); ctx.fillRect(x + 2, y + 3, 1, 1);
+      } else if (p.kind === 'bat') {
+        const up = Math.sin(p.ph * 4) > 0;
+        ctx.fillRect(x + 2, y, 2, 2);
+        ctx.fillRect(x, up ? y - 1 : y + 1, 2, 1); ctx.fillRect(x + 4, up ? y - 1 : y + 1, 2, 1);
+      } else if (p.kind === 'bubble') {
+        ctx.fillRect(x + 1, y, 2, 1); ctx.fillRect(x, y + 1, 1, 2); ctx.fillRect(x + 3, y + 1, 1, 2); ctx.fillRect(x + 1, y + 3, 2, 1);
+      } else if (p.kind === 'spark') {
+        if (Math.sin(p.ph * 2) > -0.3) ctx.fillRect(x, y, 1, 1);
+      } else {
+        ctx.fillRect(x, y, p.s, p.h || p.s);
+      }
+    }
+  }
+  function drawLanterns() {
+    const s = Math.floor(scroll * 0.3);
+    for (let i = 0; i < 5; i++) {
+      const lx = mod(i * 36 + 6 - s, W + 36) - 18, len = 6 + (i % 2) * 6;
+      rect(lx + 3, 0, 1, len, INK);
+      rect(lx + 1, len, 5, 1, '#ffd23f'); rect(lx, len + 1, 7, 5, '#e8322a'); rect(lx + 1, len + 2, 1, 3, '#ff7a5a');
+      rect(lx + 1, len + 6, 5, 1, '#ffd23f'); rect(lx + 3, len + 7, 1, 2, '#ffd23f');
+    }
+  }
+  function pumpkin(x, y) {
+    rect(x + 2, y - 1, 2, 1, '#3a7a2a');
+    rect(x + 1, y, 4, 1, '#e8741a'); rect(x, y + 1, 6, 3, '#e8741a'); rect(x + 1, y + 4, 4, 1, '#c85a10');
+    rect(x + 2, y + 1, 1, 3, '#c85a10'); rect(x + 4, y + 1, 1, 3, '#c85a10');
+    if (P.star > 0.4) { rect(x + 1, y + 1, 1, 1, '#ffe066'); rect(x + 4, y + 1, 1, 1, '#ffe066'); rect(x + 2, y + 3, 2, 1, '#ffe066'); }
+  }
+
+  // Update
+  function update(dt) {
+    t += dt;
+    if (bgMode === 'cycle') tod = (tod + dt / CYCLE_SECONDS) % 1;
+    updateParts(dt);
+    if (shake > 0) shake = Math.max(0, shake - dt);
+    if (flash > 0) flash = Math.max(0, flash - dt * 3);
+    bird.wing = Math.max(0, bird.wing - dt / 0.24);
+
+    if (state === 'ready') {
+      scroll += 24 * dt; curSpeed = 24;
+      bird.y = (settingsOpen || shopOpen ? BIRD_Y_MENU : BIRD_Y) + Math.round(Math.sin(t * 5) * 3);
+      bird.rot = 0;
+      autoFlap += dt;
+      if (autoFlap > 0.4) { autoFlap = 0; bird.wing = 1; }
+      return;
+    }
+
+    if (state === 'revive') {
+      curSpeed = 0;
+      autoFlap += dt;
+      if (autoFlap > 0.4) { autoFlap = 0; bird.wing = 1; }
+      return;
+    }
+
+    if (state === 'playing') {
+      const speed = BASE_SPEED + Math.min(score, RAMP_CAP) * SPEED_RAMP;
+      scroll += speed * dt; curSpeed = speed;
+      bird.vy = Math.min(MAX_FALL, bird.vy + GRAV * dt);
+      bird.y += bird.vy * dt;
+      bird.rot += (clamp(bird.vy / 240, -0.4, 1.4) - bird.rot) * Math.min(1, dt * 14);
+      if (bird.y < 6) { bird.y = 6; if (bird.vy < 0) bird.vy = 0; }
+
+      for (const c of cols) c.x -= speed * dt;
+      while (cols.length && cols[0].x + COLW + CAP_X + 6 < 0) cols.shift();
+      fillCols();
+      for (const b of bonus) b.x -= speed * dt;
+      bonus = bonus.filter(b => b.x > -10);
+      for (const b of bonus) {
+        const dx = b.x - BIRD_X, dy = b.y - bird.y;
+        if (!b.taken && dx * dx + dy * dy < (HIT_R + 10) * (HIT_R + 10)) {
+          b.taken = true; addCoins(b.special ? SPECIAL_VALUE : BONUS_VALUE); coinBurst(b.x, b.y, b.special);
+          if (b.special) tone(1047, 2093, 0.25, 'triangle', 0.06, 0.1);
+          tone(1568, 1568, 0.05, 'square', 0.04); tone(2093, 2093, 0.1, 'square', 0.04, 0.05);
+        }
+      }
+
+      for (const c of cols) {
+        if (!c.scored && c.x + COLW / 2 < BIRD_X) {
+          c.scored = true; score++; addCoins(1);
+          scoreEl.textContent = score;
+          if (!reduce) { scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump'); }
+          tone(988, 988, 0.06, 'square', 0.04);
+          tone(1319, 1319, 0.12, 'square', 0.04, 0.06);
+        }
+      }
+      if (bird.y + HIT_R >= SKY_H) { bird.y = SKY_H - HIT_R; die(); return; }
+      for (const c of cols) { if (hitsColumn(c)) { die(); return; } }
+      return;
+    }
+
+    bird.vy = Math.min(MAX_FALL, bird.vy + GRAV * dt);
+    bird.y += bird.vy * dt;
+    bird.rot += (1.5 - bird.rot) * Math.min(1, dt * 10);
+    if (bird.y + HIT_R >= SKY_H) { bird.y = SKY_H - HIT_R; bird.vy = 0; }
+    if (!panelShown && performance.now() - deadAt > 650) showPanel();
+  }
+
+  // Drawing helpers (always whole pixels)
+  function rect(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); }
+  function disc(cx, cy, r, c) {
+    ctx.fillStyle = c;
+    cx = Math.round(cx); cy = Math.round(cy);
+    for (let dy = -r; dy <= r; dy++) {
+      const hw = Math.floor(Math.sqrt(r * r - dy * dy + r * 0.8));
+      ctx.fillRect(cx - hw, cy + dy, hw * 2 + 1, 1);
+    }
+  }
+  const STOPS = [0, 0.38, 0.58, 0.70, 1];
+  function skyAt(f) {
+    let i = 0;
+    while (i < STOPS.length - 2 && f > STOPS[i + 1]) i++;
+    const u = (f - STOPS[i]) / (STOPS[i + 1] - STOPS[i]);
+    const a = P.sky[i], b = P.sky[i + 1];
+    return S([0, 1, 2].map(k => Math.round(a[k] + (b[k] - a[k]) * u)));
+  }
+
+  function drawSky() {
+    for (let y = 0; y < SKY_H; y += 6) rect(0, y, W, 6, skyAt(y / SKY_H));
+    if (P.star > 0.01) {
+      ctx.fillStyle = S(PAPER);
+      for (const s of stars) {
+        ctx.globalAlpha = P.star * (reduce ? 0.7 : (Math.sin(t * 2 + s.p) > -0.2 ? 0.9 : 0.35));
+        ctx.fillRect(s.x, s.y, 1, 1);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawCelestials() {
+    const us = tod / 0.58;
+    if (us <= 1) {
+      const sx = 16 + 112 * us, sy = HORIZON - Math.sin(us * Math.PI) * ARC;
+      ctx.globalAlpha = 0.25; disc(sx, sy, 17, S(P.sun));
+      ctx.globalAlpha = 0.4; disc(sx, sy, 14, S(P.sun));
+      ctx.globalAlpha = 1; disc(sx, sy, 11, S(P.sun));
+    }
+    const v = mod(tod - 0.56, 1);
+    if (v <= 0.5) {
+      const w = v / 0.5, mx = 16 + 112 * w, my = HORIZON - Math.sin(w * Math.PI) * ARC * 0.9;
+      ctx.globalAlpha = 0.4 + 0.6 * P.star;
+      disc(mx, my, 9, '#eef1ff');
+      rect(mx - 4, my - 3, 3, 2, '#c4cae6'); rect(mx + 2, my + 1, 3, 3, '#c4cae6'); rect(mx - 2, my + 5, 2, 1, '#c4cae6');
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawClouds() {
+    if (P.cloudA < 0.02) return;
+    ctx.globalAlpha = P.cloudA;
+    const span = W + 70;
+    for (const c of clouds) {
+      const x = Math.round(mod(c.x - scroll * 0.08, span) - 35), y = c.y, s = c.s;
+      const r1 = Math.round(7 * s), r2 = Math.round(5 * s), off = Math.round(8 * s);
+      for (const pass of [[1, P.cloud[1]], [0, P.cloud[0]]]) {
+        disc(x, y + pass[0], r1, pass[1]);
+        disc(x - off, y + 2 + pass[0], r2, pass[1]);
+        disc(x + off, y + 2 + pass[0], r2, pass[1]);
+      }
+      rect(x - off - r2, y + 2 + r2 - 1, off * 2 + r2 * 2 + 1, 2, P.cloud[1]);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function layer(color, fn, par) {
+    ctx.fillStyle = color;
+    const s = Math.floor(scroll * par);
+    for (let x = 0; x < W; x++) {
+      const y = Math.round(fn(x + s));
+      ctx.fillRect(x, y, 1, SKY_H - y);
+    }
+  }
+  function drawHills() {
+    layer(P.hill[0], u => SKY_H - 44 - Math.abs(Math.sin(u * 0.085)) * 11 - Math.abs(Math.sin(u * 0.2 + 1)) * 3, 0.1);
+    layer(P.hill[1], u => SKY_H - 32 + Math.sin(u * 0.07) * 6 + Math.sin(u * 0.17 + 2.1) * 2, 0.25);
+    layer(P.hill[2], u => SKY_H - 10 - Math.abs(Math.sin(u * 0.12)) * 9 - Math.abs(Math.sin(u * 0.29 + 0.7)) * 2, 0.5);
+    if (THEME.deco === 'flowers') {
+      const s = Math.floor(scroll * 0.5);
+      for (let i = 0; i < 12; i++) {
+        const x = mod(i * 29 + 7 - s, W + 20) - 10, y = SKY_H - 4 - (i * 7) % 6, fc = i % 2 ? '#ff9ec8' : '#fff4a8';
+        rect(x, y, 1, 1, fc); rect(x - 1, y + 1, 3, 1, fc); rect(x, y + 1, 1, 1, '#ffffff'); rect(x, y + 2, 1, 1, fc);
+      }
+    }
+    if (THEME.deco === 'pumpkins') {
+      const s = Math.floor(scroll);
+      for (let i = 0; i < 4; i++) pumpkin(mod(i * 47 + 13 - s, W + 20) - 10, SKY_H - 5);
+    }
+  }
+
+  function shade(x, y, w, h) {
+    rect(x, y, w, h, INK);
+    rect(x + 1, y, w - 2, h, P.col[0]);
+    rect(x + 2, y, 3, h, P.col[1]);
+    rect(x + w - 5, y, 3, h, P.col[2]);
+  }
+  // Coins, themed by season
+  const ROUND_COIN = ['..kkkkk..', '.kyyyyyk.', 'kywwyyydk', 'kywyyyydk', 'kywyyyydk', 'kyyyyyydk', 'kyyyyyddk', '.kdddddk.', '..kkkkk..'];
+  const STAR = ['....k....', '...kyk...', 'kkkyyykkk', 'kyyyyyyyk', '.kyyWyyk.', '..kyyyk..', '.kyykyyk.', 'kyyk.kyyk', 'kkk...kkk'];
+  const COIN_ART = {
+    gold: { g: ROUND_COIN, m: { y: '#ffd23f', w: '#fff6b0', d: '#d8960f' }, spin: true, burst: '#ffd23f' },
+    amber: { g: ROUND_COIN, m: { y: '#f2a03a', w: '#ffe0a0', d: '#c46a1a' }, spin: true, burst: '#f2b03a' },
+    lunar: { g: ['..kkkkk..', '.kyyyyyk.', 'kyyyyyyyk', 'kyykkkyyk', 'kyyk.kyyk', 'kyykkkyyk', 'kyyyyyydk', '.kdddddk.', '..kkkkk..'],
+      m: { y: '#ffcf3a', d: '#d8960f' }, spin: true, burst: '#ffd23f' },
+    pumpkin: { g: ['....g....', '..kkgkk..', '.koooook.', 'koooooook', 'koyoooyok', 'koooooook', 'kooyyyook', '.koooook.', '..kkkkk..'],
+      m: { g: '#3a7a2a', o: '#ee7a1c', y: '#ffe066' }, burst: '#ff9a2a' },
+    ornament: { g: ['....k....', '...kgk...', '..kgggk..', '.krrrrrk.', 'krWWrrrrk', 'krWrrrrrk', 'krrrrrrdk', '.krrrrdk.', '..kkkkk..'],
+      m: { g: '#ffd23f', r: '#e8322a', W: '#ffffff', d: '#a8201a' }, burst: '#ffffff' },
+    heart: { g: ['.kkk.kkk.', 'kpppkpppk', 'kpWpppppk', 'kpWpppppk', 'kpppppppk', '.kpppppk.', '..kpppk..', '...kpk...', '....k....'],
+      m: { p: '#ff5a8a', W: '#ffffff' }, burst: '#ff9ec0' },
+    flower: { g: ['..kkkkk..', '.kpppppk.', 'kppppppdk', 'kpppyppdk', 'kppyyypdk', 'kpppyppdk', 'kppppppdk', '.kdddddk.', '..kkkkk..'],
+      m: { p: '#ff9ec8', y: '#ffe066', d: '#e070a0' }, burst: '#ffb0cc' },
+    star: { g: STAR, m: { y: '#ffd23f', W: '#fff6b0' }, burst: '#fff6b0' },
+    starfish: { g: STAR, m: { y: '#ff8a3d', W: '#ffc08a' }, burst: '#ffb07a' },
+    pearl: { g: ROUND_COIN, m: { y: '#f0ecff', w: '#ffffff', d: '#c0b8e0' }, burst: '#ffffff' },
+    candy: { g: ROUND_COIN, m: { y: '#ff6aa8', w: '#ffffff', d: '#d8407a' }, spin: true, burst: '#ff9ec8' }
+  };
+  const COIN_FOR = { beach: 'starfish', underwater: 'pearl', candy: 'candy', space: 'star', main: 'gold', spring: 'flower', valentine: 'heart', lunar: 'lunar', autumn: 'amber', halloween: 'pumpkin', christmas: 'ornament' };
+  const coinCache = {};
+  function coinSprite(key) {
+    if (coinCache[key]) return coinCache[key];
+    const a = COIN_ART[key], cv = document.createElement('canvas');
+    cv.width = a.g[0].length; cv.height = a.g.length;
+    const c2 = cv.getContext('2d');
+    a.g.forEach((row, y) => row.split('').forEach((ch, x) => {
+      if (ch === '.') return;
+      c2.fillStyle = ch === 'k' ? INK : a.m[ch];
+      c2.fillRect(x, y, 1, 1);
+    }));
+    return (coinCache[key] = cv);
+  }
+  function drawCoin(c) {
+    const key = COIN_FOR[themeKey] || 'gold', art = COIN_ART[key], spr = coinSprite(key);
+    const cx = Math.round(c.x), bob = Math.round(Math.sin(t * 4 + c.y) * 1.2);
+    const y = c.y - 4 + bob;
+    if (c.special) {
+      ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 6);
+      disc(cx, y + 4, 8, art.burst);
+      ctx.globalAlpha = 1;
+      for (let i = 0; i < 4; i++) {
+        const a = t * 2 + i * Math.PI / 2;
+        rect(cx + Math.round(Math.cos(a) * 10), y + 4 + Math.round(Math.sin(a) * 10), 1, 1, '#ffffff');
+        rect(cx + Math.round(Math.cos(a) * 10) - 1, y + 4 + Math.round(Math.sin(a) * 10), 3, 1, 'rgba(255,255,255,0.5)');
+      }
+    }
+    if (art.spin && !reduce) {
+      const w = Math.max(1, Math.round(spr.width * Math.abs(Math.cos(t * 3 + c.y))));
+      ctx.drawImage(spr, cx - Math.floor(w / 2), y, w, spr.height);
+    } else {
+      ctx.drawImage(spr, cx - 4, y);
+    }
+  }
+  function coinBurst(x, y, big) {
+    const col = COIN_ART[COIN_FOR[themeKey] || 'gold'].burst;
+    const n = big ? 16 : 8;
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2, sp = big && i % 2 ? 60 : 40;
+      parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, kind: 'spark', c: col, life: 0.35, ph: 0 });
+    }
+  }
+  function leaf(x, y, dir) {
+    for (let i = 0; i < 9; i++) {
+      const px = dir > 0 ? x + i : x - i - 1, py = y - Math.floor(i / 2);
+      const th = i > 1 && i < 7 ? 2 : 1;
+      rect(px, py - 1, 1, 1, INK);
+      rect(px, py, 1, th, P.col[1]);
+      rect(px, py + th, 1, 1, P.col[2]);
+      rect(px, py + th + 1, 1, 1, INK);
+    }
+  }
+  let candyPat = null;
+  function candyPattern() {
+    if (candyPat) return candyPat;
+    const c = document.createElement('canvas'); c.width = 8; c.height = 8;
+    const g = c.getContext('2d'); g.fillStyle = '#ff4a6a';
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if ((x + y) % 8 < 3) g.fillRect(x, y, 1, 1);
+    return (candyPat = ctx.createPattern(c, 'repeat'));
+  }
+  function drawPlanet() {
+    const px = Math.round(mod(110 - scroll * 0.03, W + 60) - 30), py = 64;
+    disc(px, py, 13, '#e88ad8');
+    rect(px - 12, py - 3, 25, 2, '#c86ab8'); rect(px - 10, py + 4, 21, 2, '#c86ab8');
+    rect(px - 21, py + 1, 43, 1, '#ffd8a8'); rect(px - 19, py, 3, 1, '#ffd8a8'); rect(px + 17, py + 2, 3, 1, '#ffd8a8');
+    disc(px + 38, py + 36, 4, '#8ad8ff');
+  }
+  function drawColumn(c) {
+    const x = Math.round(c.x), top = c.gy - c.gap / 2, bot = c.gy + c.gap / 2;
+    const tEnd = top - CAP_H, bStart = bot + CAP_H;
+    if (tEnd > 0) shade(x, 0, COLW, tEnd);
+    shade(x, bStart, COLW, SKY_H - bStart);
+    if (THEME.deco === 'candy') {
+      ctx.save(); ctx.translate(x, 0); ctx.fillStyle = candyPattern();
+      if (tEnd > 0) ctx.fillRect(1, 0, COLW - 2, tEnd);
+      ctx.fillRect(1, bStart, COLW - 2, SKY_H - bStart);
+      ctx.restore();
+    }
+    for (const cy of [tEnd, bot]) {
+      const cx = x - CAP_X, cw = COLW + CAP_X * 2;
+      rect(cx, cy, cw, CAP_H, INK);
+      rect(cx + 1, cy + 1, cw - 2, CAP_H - 2, P.col[0]);
+      rect(cx + 2, cy + 1, 3, CAP_H - 2, P.col[1]);
+      rect(cx + cw - 5, cy + 1, 3, CAP_H - 2, P.col[2]);
+      rect(cx + 1, cy + 1, cw - 2, 1, P.col[1]);
+      rect(cx + 1, cy + CAP_H - 2, cw - 2, 1, P.col[2]);
+    }
+    const ccx = x - CAP_X, ccw = COLW + CAP_X * 2;
+    if (THEME.deco === 'xmas') {
+      rect(ccx - 1, bot - 2, ccw + 2, 2, '#ffffff'); rect(ccx + 3, bot, 2, 1, '#ffffff'); rect(ccx + ccw - 7, bot, 1, 2, '#ffffff');
+      const LC = ['#ff4a4a', '#ffd23f', '#4ad06a', '#4aa0ff'];
+      for (const cy of [tEnd, bot]) for (let i = 0, lx = ccx + 2; lx < ccx + ccw - 2; lx += 3, i++) {
+        if ((i + Math.floor(t * 3)) % 3 !== 0) rect(lx, cy + Math.floor(CAP_H / 2) - 1, 1, 1, LC[i % 4]);
+      }
+    }
+    if (THEME.deco === 'lanterns') {
+      for (const cy of [tEnd, bot]) rect(ccx + 1, cy + Math.floor(CAP_H / 2) - 1, ccw - 2, 1, '#ffd23f');
+    }
+  }
+
+  function drawGround() {
+    const gy = SKY_H, sc = Math.floor(scroll);
+    rect(0, gy, W, 1, INK);
+    for (let yy = 0; yy < 6; yy++) {
+      for (let x = 0; x < W; x++) {
+        ctx.fillStyle = mod(x + sc + yy, 10) < 5 ? P.ground[0] : P.ground[1];
+        ctx.fillRect(x, gy + 1 + yy, 1, 1);
+      }
+    }
+    rect(0, gy + 7, W, 1, P.ground[1]);
+    rect(0, gy + 8, W, GROUND - 8, P.ground[2]);
+    ctx.fillStyle = P.ground[3];
+    for (const d of sandDots) ctx.fillRect(mod(d.x - sc, W), gy + d.y, 2, 1);
+  }
+
+  function drawBird() {
+    const wk = bird.wing > 0.55 ? 'down' : bird.wing > 0.15 ? 'up' : 'mid';
+    const spr = birdSprite(state === 'dead' ? 'mid' : wk);
+    const sk = skinMode !== 'none' ? SKINS[skinMode] : null;
+    bctx.setTransform(1, 0, 0, 1, 0, 0);
+    bctx.clearRect(0, 0, bCanvas.width, bCanvas.height);
+    bctx.imageSmoothingEnabled = false;
+    bctx.translate((BIRD_X + shX) * BS, (Math.round(bird.y) + shY) * BS);
+    bctx.rotate(bird.rot);
+    const k = BS * BIRD_SCALE;
+    bctx.globalAlpha = (sk && sk.alpha) || 1;
+    bctx.drawImage(spr, -(13 + PADX * PX) * k, -(10 + PADT * PX) * k, spr.width * k, spr.height * k);
+    bctx.globalAlpha = 1;
+  }
+
+  function draw() {
+    computePalette();
+    ctx.save();
+    shX = 0; shY = 0;
+    if (shake > 0 && !reduce) {
+      const m = shake > 0.15 ? 2 : 1;
+      shX = Math.round((Math.random() - 0.5) * 2 * m); shY = Math.round((Math.random() - 0.5) * 2 * m);
+      ctx.translate(shX, shY);
+    }
+    drawSky();
+    drawCelestials();
+    if (THEME.deco === 'planet') drawPlanet();
+    drawClouds();
+    if (THEME.deco === 'lanterns') drawLanterns();
+    drawHills();
+    for (const c of cols) drawColumn(c);
+    for (const b of bonus) if (!b.taken) drawCoin(b);
+    drawGround();
+    drawParts();
+    drawBird();
+    ctx.restore();
+    if (flash > 0) { ctx.fillStyle = S(PAPER, Math.min(1, flash) * 0.8); ctx.fillRect(0, 0, W, H); }
+  }
+
+  // Sizing: whole-number scale when it costs little space, so pixels stay even
+  function resize() {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h) return;
+    // Taller screens get a taller play field instead of empty bars
+    const nh = clamp(Math.round(W * h / w), H_MIN, H_MAX);
+    if (nh !== H) {
+      const dy = nh - H;
+      H = nh; SKY_H = H - GROUND; HORIZON = SKY_H - 56; BIRD_Y = Math.round(SKY_H * 0.51);
+      canvas.height = H; ctx.imageSmoothingEnabled = false;
+      for (const c of cols) c.gy += Math.round(dy / 2);
+      for (const b of bonus) b.y += Math.round(dy / 2);
+      if (state !== 'playing') bird.y += Math.round(dy / 2);
+      genStars();
+    }
+    let fw, fh;
+    if (APP) {
+      fw = w; fh = h;
+    } else {
+      let s = Math.min(w / W, h / H);
+      const si = Math.floor(s);
+      if (si >= 2 && si / s > 0.85) s = si;
+      fw = Math.floor(W * s); fh = Math.floor(H * s);
+    }
+    frame.style.width = fw + 'px';
+    frame.style.height = fh + 'px';
+    frame.style.setProperty('--u', (fw / 360).toFixed(4));
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    bCanvas.width = Math.round(fw * dpr);
+    bCanvas.height = Math.round(fh * dpr);
+    BS = bCanvas.width / W;
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+  window.addEventListener('resize', resize);
+
+  let last = 0;
+  function loop(ts) {
+    const dt = last ? Math.min(0.033, (ts - last) / 1000) : 0.016;
+    last = ts;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  document.addEventListener('visibilitychange', () => {
+    last = 0;
+    if (document.hidden) stopMusic(); else if (musicOn && actx) startMusic();
+    if (!document.hidden) syncTime();
+  });
+
+  updateWallet();
+  applySeason();
+  window.addEventListener('online', syncTime);
+  window.addEventListener('offline', () => { netTime = null; onTimeChange(); });
+  syncTime();
+  applyBg();
+  syncSettingsUI();
+  reset();
+  resize();
+  draw();
+  requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>
