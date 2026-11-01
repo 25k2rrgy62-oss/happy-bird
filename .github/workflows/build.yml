@@ -7,13 +7,22 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+
+      - name: Find the game file
+        run: |
+          ls -la
+          if [ ! -f index.html ]; then
+            f=$(ls *.html 2>/dev/null | head -1)
+            if [ -n "$f" ]; then cp "$f" index.html; echo "Using $f"
+            else echo "::error::No .html file found. Upload index.html to the repository first."; exit 1; fi
+          fi
 
       - name: Create the iOS project
         run: |
@@ -50,3 +59,4 @@ jobs:
         with:
           name: HappyBird-ipa
           path: HappyBird.ipa
+
