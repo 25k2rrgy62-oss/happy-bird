@@ -30,15 +30,44 @@ jobs:
           npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/ios@6.2.0
           mkdir -p www
           cp index.html www/index.html
-          npx cap init "Happy Bird" com.happybird.game --web-dir www
+          cat > capacitor.config.json <<'JSON'
+          {
+            "appId": "com.happybird.game",
+            "appName": "Happy Bird",
+            "webDir": "www",
+            "backgroundColor": "#16222e",
+            "ios": { "contentInset": "never", "scrollEnabled": false }
+          }
+          JSON
           npx cap add ios
           npx cap sync ios
           PLIST=ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Delete :UISupportedInterfaceOrientations" $PLIST || true
           /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations array" $PLIST
           /usr/libexec/PlistBuddy -c "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait" $PLIST
-          /usr/libexec/PlistBuddy -c "Add :UIStatusBarHidden bool true" $PLIST || true
+          /usr/libexec/PlistBuddy -c "Add :UIStatusBarHidden bool true" $PLIST || /usr/libexec/PlistBuddy -c "Set :UIStatusBarHidden true" $PLIST
           /usr/libexec/PlistBuddy -c "Set :UIViewControllerBasedStatusBarAppearance false" $PLIST || /usr/libexec/PlistBuddy -c "Add :UIViewControllerBasedStatusBarAppearance bool false" $PLIST
+
+      - name: Add the app icon and launch screen
+        run: |
+          ASSETS=ios/App/App/Assets.xcassets
+          # Find the images by size, whatever they are named
+          for f in *.png *.PNG; do
+            [ -f "$f" ] || continue
+            w=$(sips -g pixelWidth "$f" | awk '/pixelWidth/ {print $2}')
+            if [ "$w" = "1024" ] && [ ! -f icon.png ]; then cp "$f" icon.png; echo "Icon: $f"; fi
+            if [ "$w" = "2732" ] && [ ! -f splash.png ]; then cp "$f" splash.png; echo "Launch screen: $f"; fi
+          done
+          if [ -f icon.png ]; then
+            rm -f $ASSETS/AppIcon.appiconset/*.png
+            cp icon.png $ASSETS/AppIcon.appiconset/AppIcon-512@2x.png
+            cat > $ASSETS/AppIcon.appiconset/Contents.json <<'JSON'
+          {"images":[{"filename":"AppIcon-512@2x.png","idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"author":"xcode","version":1}}
+          JSON
+          fi
+          if [ -f splash.png ]; then
+            for f in $ASSETS/Splash.imageset/*.png; do cp splash.png "$f"; done
+          fi
 
       - name: Build the app (unsigned)
         run: |
@@ -59,4 +88,3 @@ jobs:
         with:
           name: HappyBird-ipa
           path: HappyBird.ipa
-
