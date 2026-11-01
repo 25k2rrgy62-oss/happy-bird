@@ -21,6 +21,11 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Install image tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq imagemagick
+
       - name: Find the game file and images
         run: |
           if [ -f Android.html ]; then cp Android.html game.html; echo "Using Android.html"
@@ -82,3 +87,4 @@ jobs:
         with:
           name: HappyBird-apk
           path: HappyBird.apk
+
