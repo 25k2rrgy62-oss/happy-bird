@@ -12,6 +12,7 @@ img { max-width: 100%; }
 </head>
 <body>
 <title>Happy Bird</title>
+<meta name="app-version" content="1.5.0">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -350,7 +351,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 }
 .medal.none { border-style: dashed; opacity: 0.35; box-shadow: none; }
 .next-medal { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
-.medal-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; font-size: 13px; font-weight: 600; }
+.medal-row { display: grid; grid-template-columns: repeat(3, 1fr); row-gap: 12px; gap: 6px; text-align: center; font-size: 13px; font-weight: 600; }
 .medal-row .medal { width: 28px; height: 28px; display: block; margin: 0 auto 4px; }
 .medal-row b { display: block; font: 400 12px/1.4 var(--display); }
 
@@ -370,6 +371,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 .days span.got { background: var(--paper-edge); opacity: 0.6; }
 .days span.now { background: var(--sun); }
 .daily-line { display: flex; align-items: center; gap: 10px; }
+.ready .version { margin: 8px auto 0; font: 400 max(8px, calc(var(--u) * 9px))/1 var(--display); opacity: 0.85; }
 .daily-line .nm { flex: 1; font-size: 15px; font-weight: 600; }
 
 /* Versus */
@@ -427,6 +429,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       <h1 class="outlined">HAPPY<br>BIRD</h1>
       <p id="readyText" class="card">Tap, click or press Space to flap. Each pipe earns a coin. Floating coins are a bonus.</p>
       <p id="bestReadyWrap" class="best-line outlined" hidden>BEST <span id="bestReady">0</span></p>
+      <p id="versionTag" class="version outlined"></p>
     </section>
 
     <div id="menu" class="menu">
@@ -968,26 +971,29 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
 
   // Medals
-  const MEDALS = [{ name: 'Bronze', at: 10, c: '#c8823a' }, { name: 'Silver', at: 20, c: '#d6dde6' }, { name: 'Gold', at: 30, c: '#ffd23f' }, { name: 'Platinum', at: 50, c: '#a8f4ec' }];
+  const MEDALS = [
+    { name: 'Bronze', at: 15, c: '#c8823a' }, { name: 'Silver', at: 30, c: '#c8d0da' }, { name: 'Gold', at: 50, c: '#ffd23f' },
+    { name: 'Platinum', at: 75, c: '#a8f4ec' }, { name: 'Diamond', at: 100, c: '#5ab8ff' }, { name: 'Legend', at: 150, c: '#ff4a8a' }
+  ];
   const medalFor = s => { let m = -1; MEDALS.forEach((d, i) => { if (s >= d.at) m = i; }); return m; };
 
   // Saved progress: stats, missions, daily reward
   const PROG_KEY = 'happy-bird-progress';
   const STAT_KEYS = ['games', 'pipes', 'earned', 'pickups', 'specials', 'boxes', 'powerups', 'debuffs', 'missions', 'revives', 'bestStreak', 'time', 'vsGames', 'vsWins'];
-  const prog = { stats: {}, medals: [0, 0, 0, 0], bestChaos: 0, missions: [], missionDay: '', daily: { last: '', streak: 0 } };
+  const prog = { stats: {}, medals: [0, 0, 0, 0, 0, 0], bestChaos: 0, missions: [], missionDay: '', daily: { last: '', streak: 0 } };
   STAT_KEYS.forEach(k => { prog.stats[k] = 0; });
   // Daily missions: 5 random ones each day. "levels" are the possible targets, harder ones pay more.
   const MISSIONS = {
-    run:      { text: n => 'Score ' + n + ' in one run', levels: [5, 10, 15, 20], best: true },
-    pipes:    { text: n => 'Fly through ' + n + ' pipes', levels: [20, 40, 60, 90] },
-    pickups:  { text: n => 'Grab ' + n + ' floating coins', levels: [8, 15, 25, 40] },
-    specials: { text: n => 'Grab ' + n + ' sparkly coins', levels: [2, 4, 6, 8] },
-    games:    { text: n => 'Play ' + n + ' games', levels: [3, 5, 8, 12] },
-    chaosRun: { text: n => 'Score ' + n + ' in one Chaos run', levels: [5, 10, 15, 20], best: true },
-    boxes:    { text: n => 'Open ' + n + ' mystery boxes', levels: [2, 4, 6, 9] },
-    powerups: { text: n => 'Catch ' + n + ' power-ups', levels: [2, 4, 6, 9] },
-    medals:   { text: n => 'Earn ' + n + ' medal' + (n > 1 ? 's' : ''), levels: [1, 2, 3, 4] },
-    versus:   { text: n => 'Play ' + n + ' Versus match' + (n > 1 ? 'es' : ''), levels: [1, 2, 3, 4] }
+    run:      { text: n => 'Score ' + n + ' in one run', levels: [20, 30, 40, 55], best: true },
+    pipes:    { text: n => 'Fly through ' + n + ' pipes', levels: [80, 130, 200, 300] },
+    pickups:  { text: n => 'Grab ' + n + ' floating coins', levels: [30, 50, 75, 110] },
+    specials: { text: n => 'Grab ' + n + ' sparkly coins', levels: [6, 10, 15, 20] },
+    games:    { text: n => 'Play ' + n + ' games', levels: [10, 15, 22, 30] },
+    chaosRun: { text: n => 'Score ' + n + ' in one Chaos run', levels: [20, 30, 40, 55], best: true },
+    boxes:    { text: n => 'Open ' + n + ' mystery boxes', levels: [6, 10, 15, 20] },
+    powerups: { text: n => 'Catch ' + n + ' power-ups', levels: [6, 10, 15, 20] },
+    medals:   { text: n => 'Earn ' + n + ' medal' + (n > 1 ? 's' : ''), levels: [2, 3, 5, 7] },
+    versus:   { text: n => 'Win ' + n + ' Versus match' + (n > 1 ? 'es' : ''), levels: [1, 2, 3, 5] }
   };
   const MISSIONS_PER_DAY = 5;
   const num = v => (typeof v === 'number' && isFinite(v) && v >= 0 ? v : 0);
@@ -995,7 +1001,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     const p = JSON.parse(localStorage.getItem(PROG_KEY) || 'null');
     if (p) {
       if (p.stats) STAT_KEYS.forEach(k => { prog.stats[k] = num(p.stats[k]); });
-      if (Array.isArray(p.medals)) prog.medals = [0, 1, 2, 3].map(i => Math.floor(num(p.medals[i])));
+      if (Array.isArray(p.medals)) prog.medals = MEDALS.map((d, i) => i).map(i => Math.floor(num(p.medals[i])));
       prog.bestChaos = Math.floor(num(p.bestChaos));
       if (typeof p.missionDay === 'string' && Array.isArray(p.missions)) {
         prog.missionDay = p.missionDay;
@@ -1012,13 +1018,14 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   const todayKey = () => dayKey(trustedNow() || new Date());
   function ensureMissions() {
     const today = todayKey();
-    if (prog.missionDay === today && prog.missions.length === MISSIONS_PER_DAY) return;
+    // Keep today's missions, unless they came from an older version with different targets
+    if (prog.missionDay === today && prog.missions.length === MISSIONS_PER_DAY && prog.missions.every(m => MISSIONS[m.type].levels.includes(m.target))) return;
     // New day: shuffle the mission types and take the first 5, each at a random level
     const types = Object.keys(MISSIONS);
     for (let i = types.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [types[i], types[j]] = [types[j], types[i]]; }
     prog.missions = types.slice(0, MISSIONS_PER_DAY).map(type => {
       const lv = Math.floor(Math.random() * 4);
-      return { type, target: MISSIONS[type].levels[lv], progress: 0, reward: 15 + 10 * lv, claimed: false };
+      return { type, target: MISSIONS[type].levels[lv], progress: 0, reward: 30 + 15 * lv, claimed: false };
     });
     prog.missionDay = today;
     saveProg();
@@ -1321,7 +1328,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     medalEl.className = 'medal' + (md < 0 ? ' none' : '');
     medalEl.style.setProperty('--mc', md < 0 ? 'transparent' : MEDALS[md].c);
     medalEl.title = md < 0 ? 'No medal' : MEDALS[md].name + ' medal';
-    $('nextMedal').textContent = md < 3 ? (MEDALS[md + 1].at - score) + ' more for ' + MEDALS[md + 1].name.toLowerCase() : 'Top medal!';
+    $('nextMedal').textContent = md < MEDALS.length - 1 ? (MEDALS[md + 1].at - score) + ' more for ' + MEDALS[md + 1].name.toLowerCase() : 'Top medal!';
     runCoinsEl.textContent = '+' + runCoins + ' coins this run, ' + wallet.coins + ' total';
     reviveBtn.hidden = overShop.hidden = !!vs;
     againBtn.textContent = vs ? 'REMATCH' : 'PLAY AGAIN';
@@ -1798,8 +1805,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       text += score + ' – ' + g.sc;
       if (!vs.recorded) {
         vs.recorded = true;
-        prog.stats.vsGames++; track('versus', 1);
-        if (score > g.sc) { prog.stats.vsWins++; buzz('win'); tone(784, 1568, 0.3, 'triangle', 0.06); }
+        prog.stats.vsGames++;
+        if (score > g.sc) { prog.stats.vsWins++; track('versus', 1); buzz('win'); tone(784, 1568, 0.3, 'triangle', 0.06); }
         saveProg();
       }
       if (g.left) text += ' · Rival left';
@@ -2453,6 +2460,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   applyBg();
   syncSettingsUI();
   ensureMissions();
+  const VERSION = (document.querySelector('meta[name="app-version"]') || {}).content || '';
+  $('versionTag').textContent = VERSION ? 'v' + VERSION : '';
   syncModes();
   reset();
   resize();
