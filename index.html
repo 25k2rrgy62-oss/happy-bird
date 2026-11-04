@@ -12,7 +12,7 @@ img { max-width: 100%; }
 </head>
 <body>
 <title>Happy Bird</title>
-<meta name="app-version" content="1.5.0">
+<meta name="app-version" content="1.6.0">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -523,8 +523,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
     <section id="versus" class="panel card" role="dialog" aria-label="Versus" hidden>
       <h2>VERSUS</h2>
-      <p class="shop-note">Race a friend online. You both get the same pipes and see each other as a ghost bird. Highest score wins.</p>
-      <div class="group"><h3>Host a game</h3><button id="vsHost" class="btn alt" type="button">CREATE ROOM</button></div>
+      <p class="shop-note">Race someone online. You both get the same pipes and see each other as a ghost bird. Highest score wins.</p>
+      <div class="group"><h3>Quick match</h3><button id="vsFind" class="btn alt" type="button">FIND MATCH</button></div>
+      <div class="group"><h3>Play a friend</h3><button id="vsHost" class="btn ghost" type="button">CREATE ROOM</button></div>
       <div class="group">
         <h3>Join a friend</h3>
         <div class="vs-join">
@@ -1579,7 +1580,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
   // Missions, stats and daily reward panels
   const xPanels = { missions: $('missions'), stats: $('stats'), daily: $('daily'), versus: $('versus') };
-  const xFocus = { missions: 'missionsDone', stats: 'statsDone', daily: 'dailyClaim', versus: 'vsHost' };
+  const xFocus = { missions: 'missionsDone', stats: 'statsDone', daily: 'dailyClaim', versus: 'vsFind' };
   const missionsBtn = $('missionsBtn'), statsBtn = $('statsBtn'), menuEl = $('menu');
   function openX(name) {
     if (state === 'playing' || state === 'revive') return;
@@ -1742,11 +1743,13 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   function vsHook(c) {
     const me = vs;
     me.conn = c;
-    c.on('open', () => {
+    const onOpen = () => {
       if (vs !== me) return;
       vsStatus('Connected!');
+      if (me.mm) toast('MATCH FOUND!', 'good');
       if (me.host) vsStartMatch();
-    });
+    };
+    if (c.open) onOpen(); else c.on('open', onOpen);
     c.on('data', d => { if (vs === me) vsData(d); });
     c.on('close', () => {
       if (vs !== me) return;
@@ -1859,6 +1862,104 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   $('versusBtn').addEventListener('click', () => { audio(); openX('versus'); });
   $('vsHost').addEventListener('click', () => vsOpen(true));
+  $('vsFind').addEventListener('click', () => vsFind());
+
+  // ---------- Matchmaking ----------
+  // There is no game server, so the lobby is a few shared names on the PeerJS server
+  // ("lobby slots"). To find a match: try to connect to slot 0. If nobody is there,
+  // take the slot yourself and wait. The next player who searches connects to you.
+  // Once matched, the waiting player gives the slot back so others can use it.
+  // The number in the name keeps different game versions from being matched together.
+  const MM_PREFIX = 'happybird-lobby-v1-', MM_SLOTS = 4;
+  const wait = ms => new Promise(ok => setTimeout(ok, ms));
+  function mmJoin(me, slot) {   // resolves 'matched', 'empty' (nobody waiting) or 'busy'
+    return new Promise(res => {
+      const peer = new window.Peer();
+      let done = false;
+      const finish = r => {
+        if (done) return;
+        done = true; clearTimeout(timer);
+        if (r !== 'matched') { try { peer.destroy(); } catch (e) {} }
+        res(r);
+      };
+      const timer = setTimeout(() => finish('busy'), 6000);
+      peer.on('open', () => {
+        if (vs !== me) { finish('busy'); return; }
+        const c = peer.connect(MM_PREFIX + slot, { reliable: true });
+        c.on('open', () => {
+          if (vs !== me || me.conn) { try { c.close(); } catch (e) {} finish('busy'); return; }
+          me.peer = peer; me.host = false; vsHook(c); finish('matched');
+        });
+        c.on('close', () => finish('busy'));
+      });
+      peer.on('error', e => finish(e && e.type === 'peer-unavailable' ? 'empty' : 'busy'));
+    });
+  }
+  function mmHost(me, slot) {   // resolves 'hosting', 'taken' (someone grabbed it first) or 'error'
+    return new Promise(res => {
+      const peer = new window.Peer(MM_PREFIX + slot);
+      let settled = false;
+      peer.on('open', () => {
+        if (settled) return;
+        settled = true;
+        if (vs !== me) { try { peer.destroy(); } catch (e) {} res('error'); return; }
+        me.peer = peer; me.host = true;
+        res('hosting');
+      });
+      peer.on('connection', c => {
+        if (vs !== me || me.conn) { try { c.close(); } catch (e) {} return; }
+        vsHook(c);
+        // Free the lobby slot once the direct connection works (the match keeps going)
+        const free = () => { try { peer.disconnect(); } catch (e) {} };
+        if (c.open) free(); else c.on('open', free);
+      });
+      peer.on('error', e => {
+        if (settled) return;
+        settled = true;
+        try { peer.destroy(); } catch (x) {}
+        res(e && e.type === 'unavailable-id' ? 'taken' : 'error');
+      });
+    });
+  }
+  async function vsFind() {
+    if (vs) vsLeave();
+    if (navigator.onLine === false) { vsStatus('You are offline. Connect to the internet first.'); return; }
+    vsStatus('Searching for a player…');
+    try { await loadPeer(); } catch (e) { vsStatus('Could not load the online module. Check your internet.'); return; }
+    const me = vs = { host: false, mm: true, code: null, peer: null, conn: null, them: null, rematch: { me: false, them: false } };
+    let taken = 0;
+    for (let attempt = 0; attempt < MM_SLOTS * 3; attempt++) {
+      if (vs !== me) return;
+      const slot = attempt % MM_SLOTS;
+      const j = await mmJoin(me, slot);
+      if (vs !== me || j === 'matched') return;
+      if (j === 'empty') {
+        const h = await mmHost(me, slot);
+        if (vs !== me) return;
+        if (h === 'hosting') {
+          vsStatus('Searching for a player…<br>You are in the lobby. Keep this open.');
+          setTimeout(() => {
+            if (vs === me && !me.conn) vsStatus('Still searching… Nobody else is looking right now.<br>Keep this open, or invite a friend with a room code.');
+          }, 30000);
+          // If two people searched at the same moment they can end up waiting in different
+          // slots. Whoever waits in a higher slot keeps checking the lower ones for a player.
+          while (slot > 0 && vs === me && !me.conn) {
+            await wait(3000 + Math.random() * 2000);
+            for (let low = 0; low < slot && vs === me && !me.conn; low++) {
+              const hostPeer = me.peer;
+              if (await mmJoin(me, low) === 'matched') { try { hostPeer.destroy(); } catch (e) {} return; }
+            }
+          }
+          return;
+        }
+        if (h === 'error') { vsStatus('Connection problem. Try again.'); vsLeave(); return; }
+        // 'taken': someone started waiting there a moment ago, so loop and join them
+        if (++taken <= 3) attempt--;
+      }
+      await wait(250);
+    }
+    if (vs === me && !me.conn) { vsStatus('The lobby is full right now. Try again in a moment.'); vsLeave(); }
+  }
   const vsJoin = () => {
     const code = $('vsCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (code.length !== 4) { vsStatus('Type the 4-letter code from your friend.'); return; }
