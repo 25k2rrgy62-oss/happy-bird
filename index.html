@@ -139,7 +139,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 .ready .card {
   width: fit-content;
   max-width: 100%;
-  margin: calc(var(--u) * 150px) auto 0;
+  margin: calc(var(--fh, 640px) * 0.30) auto 0;
   padding: 8px 12px;
   font-size: max(14px, calc(var(--u) * 16px));
   line-height: 1.35;
@@ -2157,7 +2157,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     }
     let fw, fh;
     if (APP) {
-      fw = w; fh = h;
+      // Fill the screen; only very wide screens (tablets) get side bars instead of stretching
+      const s = Math.min(w / W, h / H);
+      fw = Math.round(W * s); fh = Math.round(H * s);
+      if (w - fw <= w * 0.03) fw = w;
+      if (h - fh <= h * 0.03) fh = h;
     } else {
       let s = Math.min(w / W, h / H);
       const si = Math.floor(s);
@@ -2167,6 +2171,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     frame.style.width = fw + 'px';
     frame.style.height = fh + 'px';
     frame.style.setProperty('--u', (fw / 360).toFixed(4));
+    frame.style.setProperty('--fh', fh + 'px');
     const dpr = Math.min(3, window.devicePixelRatio || 1);
     bCanvas.width = Math.round(fw * dpr);
     bCanvas.height = Math.round(fh * dpr);
