@@ -372,6 +372,23 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 .daily-line { display: flex; align-items: center; gap: 10px; }
 .daily-line .nm { flex: 1; font-size: 15px; font-weight: 600; }
 
+/* Versus */
+.vs-join { display: flex; gap: 8px; }
+.vs-join input {
+  flex: 1; min-width: 0; padding: 8px 10px;
+  font: 400 16px/1 var(--display); letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--ink); background: #fff; border: 2px solid var(--ink);
+}
+.vs-status { margin: 12px 0 0; font-size: 15px; font-weight: 600; min-height: 1.3em; }
+.vs-code { display: block; margin-top: 6px; font: 400 26px/1.2 var(--display); letter-spacing: 0.15em; color: var(--berry); }
+.vs-result { margin: 10px 0 0; font: 400 max(11px, calc(var(--u) * 13px))/1.4 var(--display); }
+.vs-hud {
+  position: absolute; top: calc(var(--u) * 92px); left: 0; right: 0;
+  text-align: center; font: 400 max(10px, calc(var(--u) * 11px))/1 var(--display);
+  pointer-events: none; z-index: 2;
+}
+.vs-hud b { color: #ffa0e0; font-weight: 400; }
+
 /* Installed app: edge to edge, HUD below the notch */
 .app body { padding: 0; }
 .app .frame { border: 0; box-shadow: none; }
@@ -380,7 +397,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 .app .shop-btn { top: calc(env(safe-area-inset-top, 0px) + 42px); }
 .app .wallet { top: calc(env(safe-area-inset-top, 0px) + 46px); }
 .app .ready { top: calc(env(safe-area-inset-top, 0px) + var(--u) * 80px); }
-.app .fxbar { top: calc(env(safe-area-inset-top, 0px) + var(--u) * 74px); }
+.app .fxbar, .app .vs-hud { top: calc(env(safe-area-inset-top, 0px) + var(--u) * 74px); }
 .app .menu { bottom: max(calc(env(safe-area-inset-bottom, 0px) + 4px), calc(6% - 17px)); }
 .app .panel {
   bottom: calc(env(safe-area-inset-bottom, 0px) + var(--u) * 14px);
@@ -403,6 +420,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     <div class="wallet" aria-label="Coins"><i></i><span id="walletN">0</span></div>
     <p id="resumeHint" class="card hint" hidden>Tap to keep flying</p>
     <div id="fxbar" class="fxbar"></div>
+    <div id="vsHud" class="vs-hud outlined" hidden></div>
     <p id="toast" class="toast outlined" role="status" hidden></p>
 
     <section id="ready" class="ready">
@@ -418,6 +436,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       </div>
       <button id="missionsBtn" class="chip" type="button">Missions</button>
       <button id="statsBtn" class="chip" type="button">Stats</button>
+      <button id="versusBtn" class="chip" type="button">Versus</button>
     </div>
 
     <section id="over" class="over" role="status" hidden>
@@ -429,6 +448,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
           <div><dt>Best</dt><dd id="bestEnd">0</dd></div>
         </dl>
         <p id="nextMedal" class="next-medal"></p>
+        <p id="vsResult" class="vs-result" hidden></p>
         <span id="newBest" class="badge" hidden>New best</span>
         <p id="runCoins" class="run-coins"></p>
       </div>
@@ -487,7 +507,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     <section id="missions" class="panel card" role="dialog" aria-label="Missions" hidden>
       <div class="panel-head"><h2>MISSIONS</h2><span class="count">COINS <b id="misCoins">0</b></span></div>
       <div class="group"><h3>Daily reward</h3><div id="misDaily"></div></div>
-      <div class="group"><h3>Missions</h3><div id="misList"></div></div>
+      <div class="group"><h3>Today's missions</h3><p id="misReset" class="shop-note"></p><div id="misList"></div></div>
       <button id="missionsDone" class="btn" type="button">DONE</button>
     </section>
 
@@ -496,6 +516,21 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       <div class="group"><h3>Medals</h3><div id="medalRow" class="medal-row"></div></div>
       <div class="group"><h3>All time</h3><dl id="statList" class="stat-list"></dl></div>
       <button id="statsDone" class="btn" type="button">DONE</button>
+    </section>
+
+    <section id="versus" class="panel card" role="dialog" aria-label="Versus" hidden>
+      <h2>VERSUS</h2>
+      <p class="shop-note">Race a friend online. You both get the same pipes and see each other as a ghost bird. Highest score wins.</p>
+      <div class="group"><h3>Host a game</h3><button id="vsHost" class="btn alt" type="button">CREATE ROOM</button></div>
+      <div class="group">
+        <h3>Join a friend</h3>
+        <div class="vs-join">
+          <input id="vsCode" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Room code">
+          <button id="vsJoin" class="buy" type="button">Join</button>
+        </div>
+      </div>
+      <p id="vsStatus" class="vs-status" role="status"></p>
+      <button id="vsClose" class="btn ghost" type="button">CLOSE</button>
     </section>
 
     <section id="daily" class="panel card" role="dialog" aria-label="Daily reward" hidden>
@@ -895,6 +930,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   let shake = 0, flash = 0, deadAt = 0, panelShown = false, settingsOpen = false, shopOpen = false;
   let items = [], effects = {}, invuln = 0, runCounted = false, runMedal = -1, xOpen = null;
   const anyOpen = () => settingsOpen || shopOpen || !!xOpen;
+  let vs = null, dist = 0;   // vs holds the online match while one is running; dist = how far this run has flown
 
   try { best = parseInt(localStorage.getItem(STORE_KEY), 10) || 0; } catch (e) { best = 0; }
   const saveBest = () => { try { localStorage.setItem(STORE_KEY, String(best)); } catch (e) {} };
@@ -937,19 +973,23 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
   // Saved progress: stats, missions, daily reward
   const PROG_KEY = 'happy-bird-progress';
-  const STAT_KEYS = ['games', 'pipes', 'earned', 'pickups', 'specials', 'boxes', 'powerups', 'debuffs', 'missions', 'revives', 'bestStreak', 'time'];
-  const prog = { stats: {}, medals: [0, 0, 0, 0], bestChaos: 0, missions: [], tiers: {}, daily: { last: '', streak: 0 } };
+  const STAT_KEYS = ['games', 'pipes', 'earned', 'pickups', 'specials', 'boxes', 'powerups', 'debuffs', 'missions', 'revives', 'bestStreak', 'time', 'vsGames', 'vsWins'];
+  const prog = { stats: {}, medals: [0, 0, 0, 0], bestChaos: 0, missions: [], missionDay: '', daily: { last: '', streak: 0 } };
   STAT_KEYS.forEach(k => { prog.stats[k] = 0; });
+  // Daily missions: 5 random ones each day. "levels" are the possible targets, harder ones pay more.
   const MISSIONS = {
-    run:      { text: n => 'Score ' + n + ' in one run', base: 5, step: 5, cap: 100, best: true },
-    pipes:    { text: n => 'Fly through ' + n + ' pipes', base: 25, step: 25 },
-    pickups:  { text: n => 'Grab ' + n + ' floating coins', base: 10, step: 10 },
-    specials: { text: n => 'Grab ' + n + ' sparkly coins', base: 2, step: 2 },
-    games:    { text: n => 'Play ' + n + ' games', base: 3, step: 3 },
-    chaosRun: { text: n => 'Score ' + n + ' in one Chaos run', base: 5, step: 5, cap: 100, best: true },
-    boxes:    { text: n => 'Open ' + n + ' mystery boxes', base: 3, step: 3 },
-    powerups: { text: n => 'Catch ' + n + ' power-ups', base: 3, step: 3 }
+    run:      { text: n => 'Score ' + n + ' in one run', levels: [5, 10, 15, 20], best: true },
+    pipes:    { text: n => 'Fly through ' + n + ' pipes', levels: [20, 40, 60, 90] },
+    pickups:  { text: n => 'Grab ' + n + ' floating coins', levels: [8, 15, 25, 40] },
+    specials: { text: n => 'Grab ' + n + ' sparkly coins', levels: [2, 4, 6, 8] },
+    games:    { text: n => 'Play ' + n + ' games', levels: [3, 5, 8, 12] },
+    chaosRun: { text: n => 'Score ' + n + ' in one Chaos run', levels: [5, 10, 15, 20], best: true },
+    boxes:    { text: n => 'Open ' + n + ' mystery boxes', levels: [2, 4, 6, 9] },
+    powerups: { text: n => 'Catch ' + n + ' power-ups', levels: [2, 4, 6, 9] },
+    medals:   { text: n => 'Earn ' + n + ' medal' + (n > 1 ? 's' : ''), levels: [1, 2, 3, 4] },
+    versus:   { text: n => 'Play ' + n + ' Versus match' + (n > 1 ? 'es' : ''), levels: [1, 2, 3, 4] }
   };
+  const MISSIONS_PER_DAY = 5;
   const num = v => (typeof v === 'number' && isFinite(v) && v >= 0 ? v : 0);
   try {
     const p = JSON.parse(localStorage.getItem(PROG_KEY) || 'null');
@@ -957,9 +997,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       if (p.stats) STAT_KEYS.forEach(k => { prog.stats[k] = num(p.stats[k]); });
       if (Array.isArray(p.medals)) prog.medals = [0, 1, 2, 3].map(i => Math.floor(num(p.medals[i])));
       prog.bestChaos = Math.floor(num(p.bestChaos));
-      if (p.tiers) Object.keys(MISSIONS).forEach(k => { prog.tiers[k] = Math.floor(num(p.tiers[k])); });
-      if (Array.isArray(p.missions)) prog.missions = p.missions.filter(m => m && MISSIONS[m.type] && num(m.target) > 0).slice(0, 3)
-        .map(m => ({ type: m.type, target: m.target, progress: Math.min(num(m.progress), m.target), reward: num(m.reward) || 20 }));
+      if (typeof p.missionDay === 'string' && Array.isArray(p.missions)) {
+        prog.missionDay = p.missionDay;
+        prog.missions = p.missions.filter(m => m && MISSIONS[m.type] && num(m.target) > 0).slice(0, MISSIONS_PER_DAY)
+          .map(m => ({ type: m.type, target: m.target, progress: Math.min(num(m.progress), m.target), reward: num(m.reward) || 20, claimed: !!m.claimed }));
+      }
       if (p.daily && typeof p.daily.last === 'string') prog.daily = { last: p.daily.last, streak: Math.floor(num(p.daily.streak)) };
     }
   } catch (e) {}
@@ -967,30 +1009,34 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   const modeBest = () => (gameMode === 'chaos' ? prog.bestChaos : best);
   function grant(n) { wallet.coins += n; prog.stats.earned += n; saveWallet(); updateWallet(); }
 
-  function newMission(skip) {
-    const types = Object.keys(MISSIONS).filter(k => !skip.includes(k));
-    const type = types[Math.floor(Math.random() * types.length)], d = MISSIONS[type], tier = prog.tiers[type] || 0;
-    const target = Math.min(d.cap || Infinity, d.base + d.step * tier);
-    return { type, target, progress: 0, reward: 20 + 10 * Math.min(tier, 12) };
-  }
+  const todayKey = () => dayKey(trustedNow() || new Date());
   function ensureMissions() {
-    while (prog.missions.length < 3) prog.missions.push(newMission(prog.missions.map(m => m.type)));
+    const today = todayKey();
+    if (prog.missionDay === today && prog.missions.length === MISSIONS_PER_DAY) return;
+    // New day: shuffle the mission types and take the first 5, each at a random level
+    const types = Object.keys(MISSIONS);
+    for (let i = types.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [types[i], types[j]] = [types[j], types[i]]; }
+    prog.missions = types.slice(0, MISSIONS_PER_DAY).map(type => {
+      const lv = Math.floor(Math.random() * 4);
+      return { type, target: MISSIONS[type].levels[lv], progress: 0, reward: 15 + 10 * lv, claimed: false };
+    });
+    prog.missionDay = today;
+    saveProg();
   }
   const missionDone = m => m.progress >= m.target;
   function track(type, n, isBest) {
     for (const m of prog.missions) {
-      if (m.type !== type || missionDone(m)) continue;
+      if (m.type !== type || missionDone(m) || prog.missionDay !== todayKey()) continue;
       m.progress = Math.min(m.target, isBest ? Math.max(m.progress, n) : m.progress + n);
       if (missionDone(m)) { toast('MISSION DONE!', 'good'); buzz('win'); tone(784, 1568, 0.3, 'triangle', 0.06); syncDots(); }
     }
   }
   function claimMission(i) {
     const m = prog.missions[i];
-    if (!m || !missionDone(m)) return;
+    if (!m || !missionDone(m) || m.claimed) return;
     grant(m.reward);
+    m.claimed = true;
     prog.stats.missions++;
-    prog.tiers[m.type] = (prog.tiers[m.type] || 0) + 1;
-    prog.missions[i] = newMission(prog.missions.map(x => x.type));
     saveProg(); renderMissions(); syncDots();
     tone(880, 1760, 0.15, 'square', 0.05); buzz('win');
   }
@@ -1173,13 +1219,19 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     const gap = 2 * Math.round(Math.max(GAP_MIN, GAP_START - spawnCount * GAP_STEP) / 2);
     spawnCount++;
     const lo = gap / 2 + 26, hi = SKY_H - 22 - gap / 2;
-    const gy = prevGy === null ? (lo + hi) / 2 + rand(-16, 16) : clamp(prevGy + rand(-52, 52), lo, hi);
+    // In Versus both players use the same seeded random numbers, so they get the same pipes
+    const R = vs && vs.rng ? vs.rng : Math.random, rand = (a, b) => a + R() * (b - a);
+    let gy;
+    if (vs && vs.rng) {
+      vs.f = vs.f === null ? 0.5 + rand(-0.12, 0.12) : clamp(vs.f + rand(-0.38, 0.38), 0, 1);
+      gy = lo + vs.f * (hi - lo);
+    } else gy = prevGy === null ? (lo + hi) / 2 + rand(-16, 16) : clamp(prevGy + rand(-52, 52), lo, hi);
     prevGy = gy;
     const prev = cols[cols.length - 1];
     if (prev) {
       const bx = (prev.x + x) / 2 + COLW / 2, by = Math.round(clamp((prev.gy + gy) / 2 + rand(-26, 26), 22, SKY_H - 22));
-      if (gameMode === 'chaos' && spawnCount > 2 && Math.random() < CHAOS_CHANCE) items.push({ x: bx, y: by, kind: rollItem(), taken: false });
-      else bonus.push({ x: bx, y: by, taken: false, special: Math.random() < SPECIAL_CHANCE });
+      if (gameMode === 'chaos' && !vs && spawnCount > 2 && Math.random() < CHAOS_CHANCE) items.push({ x: bx, y: by, kind: rollItem(), taken: false });
+      else bonus.push({ x: bx, y: by, taken: false, special: R() < SPECIAL_CHANCE });
     }
     cols.push({ x, gy: Math.round(gy), gap, scored: false });
   }
@@ -1203,7 +1255,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
   // Flow
   function syncUI() {
-    const busy = state === 'playing' || state === 'revive';
+    const busy = state === 'playing' || state === 'revive' || !!vs;
     settingsBtn.hidden = busy; shopBtn.hidden = busy;
   }
   function updateWallet() { walletN.textContent = wallet.coins; shopCoins.textContent = wallet.coins; }
@@ -1211,7 +1263,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   const reviveCost = () => 10 * Math.pow(2, revives);
   function doRevive() {
     const cost = reviveCost();
-    if (state !== 'dead' || wallet.coins < cost) return;
+    if (state !== 'dead' || wallet.coins < cost || vs) return;
     wallet.coins -= cost; revives++; prog.stats.revives++; saveWallet(); updateWallet(); saveProg();
     cols = cols.filter(c => c.x + COLW + CAP_X < BIRD_X - 14 || c.x - CAP_X > BIRD_X + 70);
     bonus = bonus.filter(b => Math.abs(b.x - BIRD_X) > 20);
@@ -1229,7 +1281,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     state = 'ready';
     bird = { y: anyOpen() ? BIRD_Y_MENU : BIRD_Y, vy: 0, rot: 0, wing: 0 };
     cols = []; bonus = []; items = []; effects = {}; invuln = 0; runCounted = false; runMedal = -1;
-    prevGy = null; spawnCount = 0; runCoins = 0; revives = 0; fillCols(); syncFx();
+    prevGy = null; spawnCount = 0; runCoins = 0; revives = 0; dist = 0; fillCols(); syncFx();
     resumeHint.hidden = true;
     score = 0; isNew = false; panelShown = false; autoFlap = 0;
     pickBird();
@@ -1247,12 +1299,13 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     state = 'dead'; deadAt = performance.now(); curSpeed = 0;
     bird.vy = -80;
     flash = 1; shake = reduce ? 0 : 0.3;
-    if (score > modeBest()) {
+    if (vs) vsSend({ t: 'dead', sc: score, d: dist });
+    if (!vs && score > modeBest()) {
       if (gameMode === 'chaos') prog.bestChaos = score; else { best = score; saveBest(); }
       isNew = true;
     }
     const m = medalFor(score);
-    if (m > runMedal) { if (runMedal >= 0) prog.medals[runMedal]--; prog.medals[m]++; runMedal = m; }
+    if (m > runMedal) { if (runMedal < 0) track('medals', 1); else prog.medals[runMedal]--; prog.medals[m]++; runMedal = m; }
     saveProg();
     buzz('crash');
     noise(0.14, 0.18);
@@ -1270,6 +1323,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     medalEl.title = md < 0 ? 'No medal' : MEDALS[md].name + ' medal';
     $('nextMedal').textContent = md < 3 ? (MEDALS[md + 1].at - score) + ' more for ' + MEDALS[md + 1].name.toLowerCase() : 'Top medal!';
     runCoinsEl.textContent = '+' + runCoins + ' coins this run, ' + wallet.coins + ' total';
+    reviveBtn.hidden = overShop.hidden = !!vs;
+    againBtn.textContent = vs ? 'REMATCH' : 'PLAY AGAIN';
+    $('overBack').textContent = vs ? 'LEAVE' : 'BACK';
+    $('vsResult').hidden = !vs;
+    if (vs) vsShowResult();
     const cost = reviveCost();
     reviveBtn.textContent = 'REVIVE · ' + cost;
     reviveBtn.disabled = wallet.coins < cost;
@@ -1279,6 +1337,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   function press() {
     audio();
     if (musicOn && !musicTimer) startMusic();
+    if (vs && (state === 'ready' || state === 'dead')) return;   // Versus starts on a countdown
     if (state === 'ready') { start(); flap(); }
     else if (state === 'playing') flap();
     else if (state === 'revive') { state = 'playing'; resumeHint.hidden = true; scoreEl.hidden = false; syncUI(); flap(); }
@@ -1512,8 +1571,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   reviveBtn.addEventListener('click', () => { audio(); doRevive(); try { frame.focus({ preventScroll: true }); } catch (e) {} });
 
   // Missions, stats and daily reward panels
-  const xPanels = { missions: $('missions'), stats: $('stats'), daily: $('daily') };
-  const xFocus = { missions: 'missionsDone', stats: 'statsDone', daily: 'dailyClaim' };
+  const xPanels = { missions: $('missions'), stats: $('stats'), daily: $('daily'), versus: $('versus') };
+  const xFocus = { missions: 'missionsDone', stats: 'statsDone', daily: 'dailyClaim', versus: 'vsHost' };
   const missionsBtn = $('missionsBtn'), statsBtn = $('statsBtn'), menuEl = $('menu');
   function openX(name) {
     if (state === 'playing' || state === 'revive') return;
@@ -1522,18 +1581,20 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (xOpen) closeX(true);
     xOpen = name;
     if (state === 'dead') reset();
-    if (name === 'missions') renderMissions(); else if (name === 'stats') renderStats(); else renderDaily();
+    if (name === 'missions') renderMissions(); else if (name === 'stats') renderStats(); else if (name === 'versus') vsStatus(''); else renderDaily();
     xPanels[name].hidden = false; readyEl.hidden = true; overEl.hidden = true;
     try { $(xFocus[name]).focus({ preventScroll: true }); } catch (e) {}
   }
   function closeX(quiet) {
     if (!xOpen) return;
+    if (xOpen === 'versus' && vs && !vs.conn) vsLeave();   // closing the panel cancels a room nobody joined
     xPanels[xOpen].hidden = true; xOpen = null;
     if (state === 'ready') readyEl.hidden = false;
     if (!quiet) { try { frame.focus({ preventScroll: true }); } catch (e) {} }
   }
   function syncDots() {
-    const n = prog.missions.filter(missionDone).length + (dailyState().ready ? 1 : 0);
+    ensureMissions();
+    const n = prog.missions.filter(m => missionDone(m) && !m.claimed).length + (dailyState().ready ? 1 : 0);
     missionsBtn.textContent = 'Missions';
     if (n) { const d = document.createElement('span'); d.className = 'dot'; missionsBtn.appendChild(d); }
     missionsBtn.setAttribute('aria-label', n ? 'Missions, ' + n + ' reward' + (n > 1 ? 's' : '') + ' ready' : 'Missions');
@@ -1549,6 +1610,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     b.textContent = s.ready ? 'Claim' : 'Tomorrow'; b.disabled = !s.ready;
     b.addEventListener('click', () => { claimDaily(); renderMissions(); });
     line.append(nm, b); dEl.appendChild(line);
+    ensureMissions();
+    const now = trustedNow() || new Date(), mins = Math.max(1, Math.ceil((new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now) / 60000));
+    $('misReset').textContent = 'New missions in ' + (mins >= 60 ? Math.floor(mins / 60) + 'h ' : '') + (mins % 60) + 'm';
     const list = $('misList');
     list.textContent = '';
     prog.missions.forEach((m, i) => {
@@ -1557,7 +1621,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       const t = document.createElement('span'); t.className = 'nm'; t.textContent = MISSIONS[m.type].text(m.target);
       const c = document.createElement('button'); c.type = 'button'; c.className = 'buy';
       const done = missionDone(m);
-      c.textContent = done ? 'Claim +' + m.reward : '+' + m.reward; c.disabled = !done;
+      c.textContent = m.claimed ? 'Claimed' : done ? 'Claim +' + m.reward : '+' + m.reward; c.disabled = !done || m.claimed;
       c.addEventListener('click', () => claimMission(i));
       top.append(t, c);
       const bar = document.createElement('div'); bar.className = 'bar';
@@ -1584,7 +1648,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       ['Best score (Classic)', best], ['Best score (Chaos)', prog.bestChaos], ['Games played', st.games], ['Pipes passed', st.pipes],
       ['Coins earned', st.earned], ['Floating coins grabbed', st.pickups], ['Sparkly coins grabbed', st.specials],
       ['Mystery boxes opened', st.boxes], ['Power-ups caught', st.powerups], ['Debuffs hit', st.debuffs],
-      ['Missions completed', st.missions], ['Revives used', st.revives], ['Longest daily streak', st.bestStreak], ['Time flying', fmtTime(st.time)]
+      ['Missions completed', st.missions], ['Versus matches', st.vsGames], ['Versus wins', st.vsWins], ['Revives used', st.revives], ['Longest daily streak', st.bestStreak], ['Time flying', fmtTime(st.time)]
     ];
     const dl = $('statList'); dl.textContent = '';
     rows.forEach(r => {
@@ -1617,6 +1681,186 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   $('statsDone').addEventListener('click', () => closeX());
   $('dailyLater').addEventListener('click', () => closeX());
   $('dailyClaim').addEventListener('click', () => { audio(); claimDaily(); closeX(); });
+  // ---------- Online Versus ----------
+  // PeerJS connects the two phones directly (WebRTC). Its free public server only
+  // introduces them using a room code; after that the game data goes phone to phone.
+  const PEER_JS = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
+  const ROOM_PREFIX = 'happybird-room-';
+  const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const vsHud = $('vsHud');
+  let peerLoad = null;
+  function loadPeer() {
+    if (window.Peer) return Promise.resolve();
+    if (!peerLoad) peerLoad = new Promise((ok, fail) => {
+      const s = document.createElement('script');
+      s.src = PEER_JS; s.onload = ok;
+      s.onerror = () => { peerLoad = null; fail(new Error('load')); };
+      document.head.appendChild(s);
+    });
+    return peerLoad;
+  }
+  function vsStatus(html) { $('vsStatus').innerHTML = html; }
+  function mulberry32(a) {   // small seeded random number generator: same seed, same numbers
+    return () => {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function vsSend(msg) { try { if (vs && vs.conn && vs.conn.open) vs.conn.send(msg); } catch (e) {} }
+  async function vsOpen(host, code) {
+    if (vs) vsLeave();
+    if (navigator.onLine === false) { vsStatus('You are offline. Connect to the internet first.'); return; }
+    vsStatus('Connecting…');
+    try { await loadPeer(); } catch (e) { vsStatus('Could not load the online module. Check your internet.'); return; }
+    if (host) code = Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+    const me = vs = { host, code, peer: null, conn: null, them: null, rematch: { me: false, them: false } };
+    const peer = new window.Peer(host ? ROOM_PREFIX + code : undefined);
+    me.peer = peer;
+    peer.on('open', () => {
+      if (vs !== me) return;
+      if (host) vsStatus('Your room code:<span class="vs-code">' + code + '</span>Tell your friend to tap Versus and join with this code.');
+      else { vsStatus('Looking for room ' + code + '…'); vsHook(peer.connect(ROOM_PREFIX + code, { reliable: true })); }
+    });
+    peer.on('connection', c => { if (vs !== me || me.conn) { c.close(); return; } vsHook(c); });
+    peer.on('error', err => {
+      if (vs !== me) return;
+      const t = err && err.type;
+      if (t === 'unavailable-id') { vsLeave(); vsOpen(true); return; }   // code taken, pick another
+      vsStatus(t === 'peer-unavailable' ? 'No room with code ' + code + '. Check the code and try again.' : 'Connection problem (' + (t || 'unknown') + '). Try again.');
+      if (!me.conn) { try { peer.destroy(); } catch (e) {} vs = null; }
+    });
+  }
+  function vsHook(c) {
+    const me = vs;
+    me.conn = c;
+    c.on('open', () => {
+      if (vs !== me) return;
+      vsStatus('Connected!');
+      if (me.host) vsStartMatch();
+    });
+    c.on('data', d => { if (vs === me) vsData(d); });
+    c.on('close', () => {
+      if (vs !== me) return;
+      if (me.them) { me.them.dead = true; me.them.left = true; }
+      toast('RIVAL LEFT', 'bad');
+      if (state === 'dead' && panelShown) vsShowResult();
+      if (state === 'ready') { vsLeave(); reset(); }
+    });
+  }
+  function vsStartMatch() {
+    const seed = Math.floor(Math.random() * 2147483647);
+    vsSend({ t: 'go', seed });
+    vsBegin(seed);
+  }
+  function vsBegin(seed) {
+    if (xOpen) closeX(true);
+    if (settingsOpen) closeSettings();
+    if (shopOpen) closeShop();
+    vs.rng = mulberry32(seed); vs.f = null;
+    vs.them = { y: 0.5, ry: 0.5, d: 0, at: performance.now(), sc: 0, dead: false, left: false };
+    vs.rematch = { me: false, them: false }; vs.recorded = false; vs.sendAcc = 0; vs.count = 3;
+    reset();
+    readyEl.hidden = true;
+    resumeHint.textContent = 'Get ready! 3'; resumeHint.hidden = false;
+  }
+  function vsData(d) {
+    if (!d || typeof d !== 'object') return;
+    const g = vs.them;
+    if (d.t === 'go' && !vs.host && typeof d.seed === 'number') vsBegin(d.seed);
+    else if (d.t === 's' && g) { g.y = clamp(+d.y || 0, 0, 1); g.d = +d.d || 0; g.sc = d.sc | 0; g.at = performance.now(); }
+    else if (d.t === 'dead' && g) {
+      g.dead = true; g.sc = d.sc | 0; g.d = +d.d || g.d;
+      if (state === 'playing') toast('RIVAL CRASHED! (' + g.sc + ')', 'good');
+      if (state === 'dead' && panelShown) vsShowResult();
+    } else if (d.t === 'again') {
+      vs.rematch.them = true;
+      if (state === 'dead' && panelShown) vsShowResult();
+      if (vs.host && vs.rematch.me) vsStartMatch();
+    }
+  }
+  function vsRematch() {
+    if (!vs || !vs.conn || !vs.conn.open || (vs.them && vs.them.left)) return;
+    vs.rematch.me = true;
+    vsSend({ t: 'again' });
+    vsShowResult();
+    if (vs.host && vs.rematch.them) vsStartMatch();
+  }
+  function vsShowResult() {
+    const g = vs.them, el = $('vsResult');
+    let text;
+    if (!g) text = '';
+    else if (g.left && !g.dead) text = 'Your rival left.';
+    else if (!g.dead) text = 'Rival still flying… (' + g.sc + ')';
+    else {
+      text = score > g.sc ? 'YOU WIN! ' : score < g.sc ? 'YOU LOSE ' : 'DRAW ';
+      text += score + ' – ' + g.sc;
+      if (!vs.recorded) {
+        vs.recorded = true;
+        prog.stats.vsGames++; track('versus', 1);
+        if (score > g.sc) { prog.stats.vsWins++; buzz('win'); tone(784, 1568, 0.3, 'triangle', 0.06); }
+        saveProg();
+      }
+      if (g.left) text += ' · Rival left';
+    }
+    if (vs.rematch.me && !vs.rematch.them && !(g && g.left)) text += '\nWaiting for rival to rematch…';
+    else if (vs.rematch.them && !vs.rematch.me) text += '\nRival wants a rematch!';
+    el.textContent = text; el.style.whiteSpace = 'pre-line';
+    againBtn.disabled = !vs.conn || !vs.conn.open || !!(g && g.left);
+  }
+  function vsLeave() {
+    if (!vs) return;
+    const v = vs;
+    vs = null;
+    try { if (v.conn) v.conn.close(); } catch (e) {}
+    try { if (v.peer) v.peer.destroy(); } catch (e) {}
+    vsHud.hidden = true; againBtn.disabled = false;
+    syncUI();
+  }
+  function vsTick(dt) {   // called every frame while a match is on
+    if (state === 'ready' && vs.count > 0) {
+      vs.count -= dt;
+      if (vs.count <= 0) { resumeHint.hidden = true; start(); flap(); }
+      else resumeHint.textContent = 'Get ready! ' + Math.ceil(vs.count);
+    }
+    const g = vs.them;
+    if (!g) return;
+    g.ry += (g.y - g.ry) * Math.min(1, dt * 12);
+    if (state === 'playing') {
+      vs.sendAcc += dt;
+      if (vs.sendAcc >= 0.1) { vs.sendAcc = 0; vsSend({ t: 's', y: +(bird.y / SKY_H).toFixed(4), d: Math.round(dist), sc: score }); }
+    }
+    const txt = 'YOU ' + score + ' · <b>RIVAL ' + g.sc + (g.dead ? ' ✖' : '') + '</b>';
+    if (vsHud.innerHTML !== txt) vsHud.innerHTML = txt;
+    vsHud.hidden = !(state === 'playing' || state === 'dead');
+  }
+  function drawGhost() {
+    const g = vs && vs.them;
+    if (!g || g.dead || state === 'ready') return;
+    // Guess where they are now from their last message (messages arrive 10 times a second)
+    const lag = Math.min(0.3, (performance.now() - g.at) / 1000);
+    const gd = g.d + (BASE_SPEED + Math.min(g.sc, RAMP_CAP) * SPEED_RAMP) * lag;
+    const gx = BIRD_X + (gd - dist);
+    if (gx < -20 || gx > W + 20) return;
+    const spr = birdSprite('mid'), k = BS * BIRD_SCALE;
+    bctx.setTransform(1, 0, 0, 1, 0, 0);
+    bctx.translate((gx + shX) * BS, (g.ry * SKY_H + shY) * BS);
+    bctx.globalAlpha = 0.45;
+    bctx.drawImage(spr, -(13 + PADX * PX) * k, -(10 + PADT * PX) * k, spr.width * k, spr.height * k);
+    bctx.globalAlpha = 1;
+  }
+  $('versusBtn').addEventListener('click', () => { audio(); openX('versus'); });
+  $('vsHost').addEventListener('click', () => vsOpen(true));
+  const vsJoin = () => {
+    const code = $('vsCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length !== 4) { vsStatus('Type the 4-letter code from your friend.'); return; }
+    vsOpen(false, code);
+  };
+  $('vsJoin').addEventListener('click', vsJoin);
+  $('vsCode').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); vsJoin(); } });
+  $('vsClose').addEventListener('click', () => closeX());
+
   const modeBtns = { classic: $('modeClassic'), chaos: $('modeChaos') };
   function syncModes() { Object.keys(modeBtns).forEach(k => modeBtns[k].setAttribute('aria-checked', String(k === gameMode))); }
   Object.keys(modeBtns).forEach(k => modeBtns[k].addEventListener('click', () => {
@@ -1644,13 +1888,14 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     }
   });
   againBtn.addEventListener('click', () => {
+    if (vs) { vsRematch(); return; }
     audio(); reset();
     readyEl.hidden = true; state = 'revive';
     resumeHint.textContent = 'Tap to start'; resumeHint.hidden = false;
     syncUI();
     try { frame.focus({ preventScroll: true }); } catch (e) {}
   });
-  $('overBack').addEventListener('click', () => { audio(); reset(); try { frame.focus({ preventScroll: true }); } catch (e) {} });
+  $('overBack').addEventListener('click', () => { audio(); if (vs) vsLeave(); reset(); try { frame.focus({ preventScroll: true }); } catch (e) {} });
   muteBtn.addEventListener('click', () => {
     muted = !muted;
     muteBtn.textContent = muted ? 'Sound off' : 'Sound on';
@@ -1736,13 +1981,15 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (shake > 0) shake = Math.max(0, shake - dt);
     if (flash > 0) flash = Math.max(0, flash - dt * 3);
     bird.wing = Math.max(0, bird.wing - dt / 0.24);
-    const menuHide = state !== 'ready' || anyOpen();
+    if (vs) vsTick(dt);
+    const menuHide = state !== 'ready' || anyOpen() || !!(vs && vs.them);
     if (menuEl.hidden !== menuHide) menuEl.hidden = menuHide;
     const fxHide = state !== 'playing' && state !== 'revive';
     if (fxbar.hidden !== fxHide) fxbar.hidden = fxHide;
 
     if (state === 'ready') {
       scroll += 24 * dt; curSpeed = 24;
+      if (vs && vs.them) { bird.y = BIRD_Y + Math.round(Math.sin(t * 5) * 3); bird.rot = 0; return; }
       bird.y = (anyOpen() ? BIRD_Y_MENU : BIRD_Y) + Math.round(Math.sin(t * 5) * 3);
       bird.rot = 0;
       autoFlap += dt;
@@ -1764,7 +2011,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       if (invuln > 0) invuln = Math.max(0, invuln - dt);
       syncFx();
       const speed = (BASE_SPEED + Math.min(score, RAMP_CAP) * SPEED_RAMP) * (effects.slow ? 0.65 : effects.fast ? 1.35 : 1);
-      scroll += speed * dt; curSpeed = speed;
+      scroll += speed * dt; curSpeed = speed; dist += speed * dt;
       bird.vy = Math.min(MAX_FALL, bird.vy + GRAV * (effects.heavy ? 1.35 : 1) * dt);
       bird.y += bird.vy * dt;
       bird.rot += (clamp(bird.vy / 240, -0.4, 1.4) - bird.rot) * Math.min(1, dt * 14);
@@ -1802,7 +2049,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
           c.scored = true; score++; addCoins(mult);
           scoreEl.textContent = score;
           prog.stats.pipes++; track('pipes', 1); track('run', score, true);
-          if (gameMode === 'chaos') track('chaosRun', score, true);
+          if (gameMode === 'chaos' && !vs) track('chaosRun', score, true);
           const md = MEDALS.findIndex(d => d.at === score);
           if (md >= 0) { toast(MEDALS[md].name.toUpperCase() + ' MEDAL!'); buzz('win'); }
           if (!reduce) { scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump'); }
@@ -2093,6 +2340,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     bctx.setTransform(1, 0, 0, 1, 0, 0);
     bctx.clearRect(0, 0, bCanvas.width, bCanvas.height);
     bctx.imageSmoothingEnabled = false;
+    drawGhost();
+    bctx.setTransform(1, 0, 0, 1, 0, 0);
     bctx.translate((BIRD_X + shX) * BS, (Math.round(bird.y) + shY) * BS);
     bctx.rotate(bird.rot);
     const k = BS * BIRD_SCALE * (effects.tiny ? 0.65 : effects.big ? 1.4 : 1);
@@ -2203,7 +2452,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   syncTime();
   applyBg();
   syncSettingsUI();
-  ensureMissions(); saveProg();
+  ensureMissions();
   syncModes();
   reset();
   resize();
