@@ -6,6 +6,9 @@ on:
     branches: [main]
     paths: ['Android.html', '*.png', '*.PNG', '.github/workflows/Android.yml']
 
+permissions:
+  contents: write
+
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -88,3 +91,14 @@ jobs:
           name: HappyBird-apk
           path: HappyBird.apk
 
+      # Publish the APK as a plain file (no zip) on the Releases page,
+      # so it can be downloaded and installed directly on a phone.
+      - name: Publish APK to the "latest" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          unzip -tq HappyBird.apk
+          gh release delete latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
+          gh release create latest HappyBird.apk --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "Happy Bird (latest Android build)" \
+            --notes "Download HappyBird.apk below and open it on your Android phone to install."
