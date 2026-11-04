@@ -1029,10 +1029,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   };
   const GOOD = Object.keys(ITEMS).filter(k => ITEMS[k].good), BAD = Object.keys(ITEMS).filter(k => !ITEMS[k].good);
   const BOX_ICON = ['.###.', '#...#', '..##.', '.....', '..#..'];
+  const ORB_ICON = ['..#..', '.#.#.', '#...#', '.#.#.', '..#..'];
   const anyOf = a => a[Math.floor(Math.random() * a.length)];
   function rollItem() {
     const r = Math.random();
-    return r < 0.38 ? 'box' : r < 0.72 ? anyOf(GOOD) : anyOf(BAD);
+    return r < 0.38 ? 'box' : 'orb';
   }
   function applyEffect(k) {
     const d = ITEMS[k];
@@ -1044,7 +1045,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     buzz('item');
   }
   function collectItem(it) {
-    if (it.kind !== 'box') { applyEffect(it.kind); return; }
+    if (it.kind === 'orb') { applyEffect(Math.random() < 0.55 ? anyOf(GOOD) : anyOf(BAD)); return; }
     prog.stats.boxes++; track('boxes', 1);
     tone(523, 1047, 0.12, 'square', 0.05);
     const r = Math.random();
@@ -1236,7 +1237,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     overEl.hidden = true; readyEl.hidden = anyOpen();
     bestReadyWrap.hidden = modeBest() <= 0; bestReady.textContent = modeBest();
     $('readyText').textContent = gameMode === 'chaos'
-      ? 'Chaos mode! Green orbs are power-ups, purple orbs are debuffs and ? boxes could be anything.'
+      ? 'Chaos mode! Every glowing orb is a surprise: it could help you or hurt you. ? boxes might hold coins.'
       : 'Tap, click or press Space to flap. Each pipe earns a coin. Floating coins are a bonus.';
     syncUI();
   }
@@ -2052,9 +2053,10 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
 
   function drawItem(it) {
-    const d = ITEMS[it.kind], cx = Math.round(it.x), cy = Math.round(it.y + Math.sin(t * 4 + it.y) * 1.2);
+    const cx = Math.round(it.x), cy = Math.round(it.y + Math.sin(t * 4 + it.y) * 1.2);
+    const hue = Math.floor(t * 120) % 360;
     ctx.globalAlpha = 0.3 + 0.2 * Math.sin(t * 6);
-    disc(cx, cy, 10, it.kind === 'box' ? '#ffd23f' : d.good ? '#8aff6a' : '#ff4a9a');
+    disc(cx, cy, 10, it.kind === 'box' ? '#ffd23f' : 'hsl(' + hue + ', 90%, 70%)');
     ctx.globalAlpha = 1;
     let icon, ic;
     if (it.kind === 'box') {
@@ -2062,8 +2064,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       rect(cx - 5, cy - 5, 11, 2, '#e8a850'); rect(cx - 5, cy + 4, 11, 1, '#8a5018');
       icon = BOX_ICON; ic = '#ffe066';
     } else {
-      disc(cx, cy, 6, INK); disc(cx, cy, 5, d.col);
-      icon = d.icon; ic = '#ffffff';
+      disc(cx, cy, 6, INK); disc(cx, cy, 5, 'hsl(' + hue + ', 70%, 50%)');
+      icon = ORB_ICON; ic = '#ffffff';
     }
     ctx.fillStyle = ic;
     icon.forEach((row, y) => { for (let x = 0; x < 5; x++) if (row[x] === '#') ctx.fillRect(cx - 2 + x, cy - 2 + y, 1, 1); });
