@@ -27,7 +27,7 @@ jobs:
       - name: Create the iOS project
         run: |
           npm init -y
-          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/ios@6.2.0
+          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/ios@6.2.0 @capacitor/haptics@6.0.2
           mkdir -p www
           cp index.html www/index.html
           cat > capacitor.config.json <<'JSON'

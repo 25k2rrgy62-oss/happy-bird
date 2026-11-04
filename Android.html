@@ -171,7 +171,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 }
 .over .card { padding: calc(var(--u) * 16px); animation: drop 0.25s steps(5); }
 @keyframes drop { from { transform: translateY(calc(var(--u) * 60px)); } to { transform: none; } }
-.over dl { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; }
+.over dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; }
 .over dt { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .over dd { margin: 6px 0 0; font-family: var(--display); font-size: calc(var(--u) * 24px); line-height: 1; font-variant-numeric: tabular-nums; }
 .badge {
@@ -282,6 +282,96 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 .buy:disabled { background: var(--paper); opacity: 0.6; cursor: default; }
 .buy:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 
+/* Home menu: mode switch, missions, stats (sits on the ground strip) */
+.menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(4px, calc(6% - 17px));
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 10px;
+  cursor: default;
+}
+.menu .chip { position: static; }
+.modes { display: flex; border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink); background: var(--paper); }
+.modes .opt { border: 0; padding: 6px 10px; }
+.modes .opt + .opt { border-left: 2px solid var(--ink); }
+.chip .dot { display: inline-block; width: 8px; height: 8px; margin-left: 6px; background: var(--berry); border: 1px solid var(--ink); border-radius: 50%; vertical-align: 1px; }
+
+/* Power-up timers and pop-up messages */
+.fxbar {
+  position: absolute;
+  top: calc(var(--u) * 92px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding-inline: 8px;
+  pointer-events: none;
+  z-index: 2;
+}
+.fxbar span { font: 600 13px/1 var(--body); padding: 4px 6px; border: 2px solid var(--ink); background: #9be07a; color: var(--ink); }
+.fxbar span.bad { background: #d79ae8; }
+.toast {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  margin: 0;
+  transform: translateX(-50%);
+  font-family: var(--display);
+  font-size: max(12px, calc(var(--u) * 15px));
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+  color: var(--sun);
+  animation: pop 1.2s steps(8) forwards;
+}
+.toast.good { color: #b8ff8a; }
+.toast.bad { color: #ffa0e0; }
+@keyframes pop { 0% { opacity: 0; transform: translate(-50%, 10px); } 12% { opacity: 1; transform: translate(-50%, 0); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -14px); } }
+
+/* Medals */
+.medal {
+  display: inline-block;
+  width: calc(var(--u) * 26px);
+  height: calc(var(--u) * 26px);
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: var(--mc, transparent);
+  box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.22), inset 3px 3px 0 rgba(255, 255, 255, 0.5);
+  vertical-align: middle;
+}
+.medal.none { border-style: dashed; opacity: 0.35; box-shadow: none; }
+.next-medal { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+.medal-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; font-size: 13px; font-weight: 600; }
+.medal-row .medal { width: 28px; height: 28px; display: block; margin: 0 auto 4px; }
+.medal-row b { display: block; font: 400 12px/1.4 var(--display); }
+
+/* Missions, stats, daily reward */
+.mis { padding: 8px 0; border-top: 2px dashed var(--paper-edge); }
+.mis-top { display: flex; align-items: center; gap: 10px; }
+.mis-top .nm { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; }
+.bar { height: 10px; margin-top: 6px; border: 2px solid var(--ink); background: var(--paper-edge); }
+.bar i { display: block; height: 100%; background: var(--leaf); }
+.mis .prog { margin-top: 3px; font-size: 13px; color: var(--muted); }
+.stat-list { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; font-size: 15px; }
+.stat-list dt { color: var(--muted); }
+.stat-list dd { margin: 0; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
+.days span { border: 2px solid var(--ink); text-align: center; padding: 5px 0 4px; font: 600 12px/1.2 var(--body); background: var(--paper); }
+.days span b { display: block; margin-top: 3px; font: 400 9px/1 var(--display); }
+.days span.got { background: var(--paper-edge); opacity: 0.6; }
+.days span.now { background: var(--sun); }
+.daily-line { display: flex; align-items: center; gap: 10px; }
+.daily-line .nm { flex: 1; font-size: 15px; font-weight: 600; }
+
 /* Installed app: edge to edge, HUD below the notch */
 .app body { padding: 0; }
 .app .frame { border: 0; box-shadow: none; }
@@ -290,13 +380,15 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 .app .shop-btn { top: calc(env(safe-area-inset-top, 0px) + 42px); }
 .app .wallet { top: calc(env(safe-area-inset-top, 0px) + 46px); }
 .app .ready { top: calc(env(safe-area-inset-top, 0px) + var(--u) * 80px); }
+.app .fxbar { top: calc(env(safe-area-inset-top, 0px) + var(--u) * 74px); }
+.app .menu { bottom: max(calc(env(safe-area-inset-bottom, 0px) + 4px), calc(6% - 17px)); }
 .app .panel {
   bottom: calc(env(safe-area-inset-bottom, 0px) + var(--u) * 14px);
   max-height: calc(100% - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 110px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .score.bump, .over .card { animation: none; }
+  .score.bump, .over .card, .toast { animation: none; }
 }
 </style>
 
@@ -310,20 +402,33 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     <button id="shopBtn" class="chip shop-btn" type="button" aria-expanded="false">Shop</button>
     <div class="wallet" aria-label="Coins"><i></i><span id="walletN">0</span></div>
     <p id="resumeHint" class="card hint" hidden>Tap to keep flying</p>
+    <div id="fxbar" class="fxbar"></div>
+    <p id="toast" class="toast outlined" role="status" hidden></p>
 
     <section id="ready" class="ready">
       <h1 class="outlined">HAPPY<br>BIRD</h1>
-      <p class="card">Tap, click or press Space to flap. Each pipe earns a coin. Floating coins are a bonus.</p>
+      <p id="readyText" class="card">Tap, click or press Space to flap. Each pipe earns a coin. Floating coins are a bonus.</p>
       <p id="bestReadyWrap" class="best-line outlined" hidden>BEST <span id="bestReady">0</span></p>
     </section>
+
+    <div id="menu" class="menu">
+      <div class="modes" role="radiogroup" aria-label="Game mode">
+        <button id="modeClassic" class="opt" type="button" role="radio" aria-checked="true">Classic</button>
+        <button id="modeChaos" class="opt" type="button" role="radio" aria-checked="false">Chaos</button>
+      </div>
+      <button id="missionsBtn" class="chip" type="button">Missions</button>
+      <button id="statsBtn" class="chip" type="button">Stats</button>
+    </div>
 
     <section id="over" class="over" role="status" hidden>
       <h2 class="outlined">GAME OVER</h2>
       <div class="card">
         <dl>
+          <div><dt>Medal</dt><dd><span id="medal" class="medal none"></span></dd></div>
           <div><dt>Score</dt><dd id="scoreEnd">0</dd></div>
           <div><dt>Best</dt><dd id="bestEnd">0</dd></div>
         </dl>
+        <p id="nextMedal" class="next-medal"></p>
         <span id="newBest" class="badge" hidden>New best</span>
         <p id="runCoins" class="run-coins"></p>
       </div>
@@ -362,6 +467,10 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
         <h3 id="musicLabel">Music</h3>
         <div id="musicOpts" class="opts" role="radiogroup" aria-labelledby="musicLabel"></div>
       </div>
+      <div class="group">
+        <h3 id="vibLabel">Vibration</h3>
+        <div id="vibOpts" class="opts" role="radiogroup" aria-labelledby="vibLabel"></div>
+      </div>
       <button id="settingsDone" class="btn" type="button">DONE</button>
     </section>
 
@@ -373,6 +482,28 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       <div class="group"><h3>Special birds</h3><div id="shopSkins"></div></div>
       <div class="group"><h3>Hats</h3><div id="shopHats"></div></div>
       <button id="shopDone" class="btn" type="button">DONE</button>
+    </section>
+
+    <section id="missions" class="panel card" role="dialog" aria-label="Missions" hidden>
+      <div class="panel-head"><h2>MISSIONS</h2><span class="count">COINS <b id="misCoins">0</b></span></div>
+      <div class="group"><h3>Daily reward</h3><div id="misDaily"></div></div>
+      <div class="group"><h3>Missions</h3><div id="misList"></div></div>
+      <button id="missionsDone" class="btn" type="button">DONE</button>
+    </section>
+
+    <section id="stats" class="panel card" role="dialog" aria-label="Stats" hidden>
+      <h2>STATS</h2>
+      <div class="group"><h3>Medals</h3><div id="medalRow" class="medal-row"></div></div>
+      <div class="group"><h3>All time</h3><dl id="statList" class="stat-list"></dl></div>
+      <button id="statsDone" class="btn" type="button">DONE</button>
+    </section>
+
+    <section id="daily" class="panel card" role="dialog" aria-label="Daily reward" hidden>
+      <h2>DAILY REWARD</h2>
+      <p id="dailyText" class="shop-note"></p>
+      <div id="dailyDays" class="days"></div>
+      <button id="dailyClaim" class="btn alt" type="button">CLAIM</button>
+      <button id="dailyLater" class="btn ghost" type="button">LATER</button>
     </section>
   </div>
 </main>
@@ -534,11 +665,14 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   let seasonMode = 'auto', THEME = THEMES.main, themeKey = 'main';
   let bgMode = 'cycle', birdMode = 'random', birdIdx = -1, musicOn = false, skinMode = 'none', hatMode = 'none';
+  let vibOn = true, gameMode = 'classic';
   try {
     const s = JSON.parse(localStorage.getItem(SET_KEY) || '{}');
     if (BG_OPTS.some(o => o[0] === s.bg)) bgMode = s.bg;
     if (SEASONS.some(o => o[0] === s.season)) seasonMode = s.season;
     if (typeof s.music === 'boolean') musicOn = s.music;
+    if (typeof s.vib === 'boolean') vibOn = s.vib;
+    if (s.mode === 'chaos') gameMode = 'chaos';
     if (typeof s.skin === 'string') skinMode = s.skin;
     if (typeof s.hat === 'string') hatMode = s.hat;
     if (s.bird === 'random' || (Number.isInteger(s.bird) && s.bird >= 0 && s.bird < BIRDS.length)) birdMode = s.bird;
@@ -658,7 +792,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   if (skinMode !== 'none' && !wallet.skins.includes(skinMode)) skinMode = 'none';
   if (hatMode !== 'none' && !wallet.hats.includes(hatMode)) hatMode = 'none';
   const ownsSeason = k => k === 'auto' || k === 'main' || wallet.seasons.includes(k);
-  const saveSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify({ bg: bgMode, bird: birdMode, season: seasonMode, music: musicOn, skin: skinMode, hat: hatMode })); } catch (e) {} };
+  const saveSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify({ bg: bgMode, bird: birdMode, season: seasonMode, music: musicOn, skin: skinMode, hat: hatMode, vib: vibOn, mode: gameMode })); } catch (e) {} };
 
   // Bird sprite: chunky 13x10 grid drawn at 2x, so each sprite pixel is 2 canvas pixels
   const GW = 13, GH = 10, PX = 2;
@@ -759,9 +893,184 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   let score = 0, best = 0, isNew = false;
   let t = 0, scroll = 0, autoFlap = 0, tod = 0.22;
   let shake = 0, flash = 0, deadAt = 0, panelShown = false, settingsOpen = false, shopOpen = false;
+  let items = [], effects = {}, invuln = 0, runCounted = false, runMedal = -1, xOpen = null;
+  const anyOpen = () => settingsOpen || shopOpen || !!xOpen;
 
   try { best = parseInt(localStorage.getItem(STORE_KEY), 10) || 0; } catch (e) { best = 0; }
   const saveBest = () => { try { localStorage.setItem(STORE_KEY, String(best)); } catch (e) {} };
+
+  // Vibration: the native Haptics plugin inside the app, the browser's vibrate() elsewhere
+  let hapt;
+  function buzz(kind) {
+    if (!vibOn) return;
+    try {
+      if (hapt === undefined) {
+        const C = window.Capacitor;
+        hapt = C && C.isNativePlatform && C.isNativePlatform() ? ((C.Plugins && C.Plugins.Haptics) || (C.registerPlugin && C.registerPlugin('Haptics')) || null) : null;
+      }
+      if (hapt) {
+        const p = kind === 'crash' ? hapt.notification({ type: 'ERROR' }) : kind === 'win' ? hapt.notification({ type: 'SUCCESS' })
+          : hapt.impact({ style: kind === 'flap' ? 'LIGHT' : kind === 'hit' ? 'HEAVY' : 'MEDIUM' });
+        if (p && p.catch) p.catch(() => {});
+        return;
+      }
+      if (navigator.vibrate) navigator.vibrate(kind === 'crash' ? [60, 40, 90] : kind === 'win' ? [20, 60, 20] : kind === 'flap' ? 8 : kind === 'hit' ? 50 : 20);
+    } catch (e) {}
+  }
+
+  // Pop-up message in the middle of the screen
+  const toastEl = $('toast');
+  let toastTimer = null;
+  function toast(text, kind) {
+    toastEl.textContent = text;
+    toastEl.className = 'toast outlined' + (kind ? ' ' + kind : '');
+    toastEl.hidden = true;
+    void toastEl.offsetWidth;
+    toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toastEl.hidden = true; }, 1250);
+  }
+
+  // Medals
+  const MEDALS = [{ name: 'Bronze', at: 10, c: '#c8823a' }, { name: 'Silver', at: 20, c: '#d6dde6' }, { name: 'Gold', at: 30, c: '#ffd23f' }, { name: 'Platinum', at: 50, c: '#a8f4ec' }];
+  const medalFor = s => { let m = -1; MEDALS.forEach((d, i) => { if (s >= d.at) m = i; }); return m; };
+
+  // Saved progress: stats, missions, daily reward
+  const PROG_KEY = 'happy-bird-progress';
+  const STAT_KEYS = ['games', 'pipes', 'earned', 'pickups', 'specials', 'boxes', 'powerups', 'debuffs', 'missions', 'revives', 'bestStreak', 'time'];
+  const prog = { stats: {}, medals: [0, 0, 0, 0], bestChaos: 0, missions: [], tiers: {}, daily: { last: '', streak: 0 } };
+  STAT_KEYS.forEach(k => { prog.stats[k] = 0; });
+  const MISSIONS = {
+    run:      { text: n => 'Score ' + n + ' in one run', base: 5, step: 5, cap: 100, best: true },
+    pipes:    { text: n => 'Fly through ' + n + ' pipes', base: 25, step: 25 },
+    pickups:  { text: n => 'Grab ' + n + ' floating coins', base: 10, step: 10 },
+    specials: { text: n => 'Grab ' + n + ' sparkly coins', base: 2, step: 2 },
+    games:    { text: n => 'Play ' + n + ' games', base: 3, step: 3 },
+    chaosRun: { text: n => 'Score ' + n + ' in one Chaos run', base: 5, step: 5, cap: 100, best: true },
+    boxes:    { text: n => 'Open ' + n + ' mystery boxes', base: 3, step: 3 },
+    powerups: { text: n => 'Catch ' + n + ' power-ups', base: 3, step: 3 }
+  };
+  const num = v => (typeof v === 'number' && isFinite(v) && v >= 0 ? v : 0);
+  try {
+    const p = JSON.parse(localStorage.getItem(PROG_KEY) || 'null');
+    if (p) {
+      if (p.stats) STAT_KEYS.forEach(k => { prog.stats[k] = num(p.stats[k]); });
+      if (Array.isArray(p.medals)) prog.medals = [0, 1, 2, 3].map(i => Math.floor(num(p.medals[i])));
+      prog.bestChaos = Math.floor(num(p.bestChaos));
+      if (p.tiers) Object.keys(MISSIONS).forEach(k => { prog.tiers[k] = Math.floor(num(p.tiers[k])); });
+      if (Array.isArray(p.missions)) prog.missions = p.missions.filter(m => m && MISSIONS[m.type] && num(m.target) > 0).slice(0, 3)
+        .map(m => ({ type: m.type, target: m.target, progress: Math.min(num(m.progress), m.target), reward: num(m.reward) || 20 }));
+      if (p.daily && typeof p.daily.last === 'string') prog.daily = { last: p.daily.last, streak: Math.floor(num(p.daily.streak)) };
+    }
+  } catch (e) {}
+  const saveProg = () => { try { localStorage.setItem(PROG_KEY, JSON.stringify(prog)); } catch (e) {} };
+  const modeBest = () => (gameMode === 'chaos' ? prog.bestChaos : best);
+  function grant(n) { wallet.coins += n; prog.stats.earned += n; saveWallet(); updateWallet(); }
+
+  function newMission(skip) {
+    const types = Object.keys(MISSIONS).filter(k => !skip.includes(k));
+    const type = types[Math.floor(Math.random() * types.length)], d = MISSIONS[type], tier = prog.tiers[type] || 0;
+    const target = Math.min(d.cap || Infinity, d.base + d.step * tier);
+    return { type, target, progress: 0, reward: 20 + 10 * Math.min(tier, 12) };
+  }
+  function ensureMissions() {
+    while (prog.missions.length < 3) prog.missions.push(newMission(prog.missions.map(m => m.type)));
+  }
+  const missionDone = m => m.progress >= m.target;
+  function track(type, n, isBest) {
+    for (const m of prog.missions) {
+      if (m.type !== type || missionDone(m)) continue;
+      m.progress = Math.min(m.target, isBest ? Math.max(m.progress, n) : m.progress + n);
+      if (missionDone(m)) { toast('MISSION DONE!', 'good'); buzz('win'); tone(784, 1568, 0.3, 'triangle', 0.06); syncDots(); }
+    }
+  }
+  function claimMission(i) {
+    const m = prog.missions[i];
+    if (!m || !missionDone(m)) return;
+    grant(m.reward);
+    prog.stats.missions++;
+    prog.tiers[m.type] = (prog.tiers[m.type] || 0) + 1;
+    prog.missions[i] = newMission(prog.missions.map(x => x.type));
+    saveProg(); renderMissions(); syncDots();
+    tone(880, 1760, 0.15, 'square', 0.05); buzz('win');
+  }
+
+  const DAILY = [10, 15, 20, 25, 30, 40, 75];
+  const dayKey = d => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  function dailyState() {
+    const d = trustedNow() || new Date(), k = dayKey(d);
+    const y = dayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1));
+    if (prog.daily.last === k) return { ready: false, streak: prog.daily.streak, today: k };
+    const streak = prog.daily.last === y ? prog.daily.streak + 1 : 1;
+    return { ready: true, streak, amount: DAILY[(streak - 1) % 7], today: k };
+  }
+  function claimDaily() {
+    const s = dailyState();
+    if (!s.ready) return;
+    prog.daily = { last: s.today, streak: s.streak };
+    prog.stats.bestStreak = Math.max(prog.stats.bestStreak, s.streak);
+    grant(s.amount); saveProg(); syncDots();
+    toast('+' + s.amount + ' COINS', 'good');
+    tone(880, 1760, 0.15, 'square', 0.05); tone(1319, 2637, 0.25, 'triangle', 0.05, 0.12); buzz('win');
+  }
+
+  // Chaos mode pickups: green orbs help, purple orbs hurt, boxes are a gamble
+  const CHAOS_CHANCE = 0.5;
+  const ITEMS = {
+    shield: { name: 'SHIELD', good: true, dur: 15, col: '#4aa0ff', icon: ['.###.', '#####', '#####', '.###.', '..#..'] },
+    magnet: { name: 'MAGNET', good: true, dur: 8, col: '#e8463a', icon: ['#...#', '#...#', '#...#', '#...#', '.###.'] },
+    slow:   { name: 'SLOW-MO', good: true, dur: 6, col: '#38b8c8', opp: 'fast', icon: ['#####', '.###.', '..#..', '.###.', '#####'] },
+    tiny:   { name: 'TINY BIRD', good: true, dur: 8, col: '#4a9a2a', opp: 'big', icon: ['..#..', '..#..', '#.#.#', '.###.', '..#..'] },
+    double: { name: 'DOUBLE COINS', good: true, dur: 10, col: '#e89a1a', icon: ['####.', '....#', '.###.', '#....', '#####'] },
+    heavy:  { name: 'HEAVY', good: false, dur: 6, col: '#7a3ab0', icon: ['..#..', '.###.', '#####', '#####', '#####'] },
+    fast:   { name: 'TOO FAST', good: false, dur: 6, col: '#7a3ab0', opp: 'slow', icon: ['#.#..', '.#.#.', '..#.#', '.#.#.', '#.#..'] },
+    big:    { name: 'BIG BIRD', good: false, dur: 6, col: '#7a3ab0', opp: 'tiny', icon: ['..#..', '.###.', '#.#.#', '..#..', '..#..'] },
+    fog:    { name: 'FOG', good: false, dur: 7, col: '#7a3ab0', icon: ['.....', '.##..', '#####', '#####', '.....'] }
+  };
+  const GOOD = Object.keys(ITEMS).filter(k => ITEMS[k].good), BAD = Object.keys(ITEMS).filter(k => !ITEMS[k].good);
+  const BOX_ICON = ['.###.', '#...#', '..##.', '.....', '..#..'];
+  const anyOf = a => a[Math.floor(Math.random() * a.length)];
+  function rollItem() {
+    const r = Math.random();
+    return r < 0.38 ? 'box' : r < 0.72 ? anyOf(GOOD) : anyOf(BAD);
+  }
+  function applyEffect(k) {
+    const d = ITEMS[k];
+    if (d.opp) delete effects[d.opp];
+    effects[k] = d.dur;
+    toast(d.name + (d.good ? '!' : '...'), d.good ? 'good' : 'bad');
+    if (d.good) { prog.stats.powerups++; track('powerups', 1); tone(660, 1320, 0.18, 'triangle', 0.06); }
+    else { prog.stats.debuffs++; tone(420, 140, 0.3, 'sawtooth', 0.05); }
+    buzz('item');
+  }
+  function collectItem(it) {
+    if (it.kind !== 'box') { applyEffect(it.kind); return; }
+    prog.stats.boxes++; track('boxes', 1);
+    tone(523, 1047, 0.12, 'square', 0.05);
+    const r = Math.random();
+    if (r < 0.3) {
+      const n = 8 + Math.floor(Math.random() * 13);
+      addCoins(n); coinBurst(it.x, it.y, true);
+      toast('+' + n + ' COINS', 'good'); buzz('item');
+      tone(1568, 2093, 0.2, 'triangle', 0.06, 0.1);
+    } else applyEffect(r < 0.68 ? anyOf(GOOD) : anyOf(BAD));
+  }
+  const hitR = () => HIT_R * (effects.tiny ? 0.6 : effects.big ? 1.45 : 1);
+  const fxbar = $('fxbar');
+  let fxText = '';
+  function syncFx() {
+    const keys = Object.keys(effects);
+    const s = keys.map(k => k + Math.ceil(effects[k])).join();
+    if (s === fxText) return;
+    fxText = s;
+    fxbar.textContent = '';
+    keys.forEach(k => {
+      const e = document.createElement('span');
+      e.className = ITEMS[k].good ? '' : 'bad';
+      e.textContent = ITEMS[k].name + ' ' + Math.ceil(effects[k]);
+      fxbar.appendChild(e);
+    });
+  }
 
   function applyBg() { if (bgMode !== 'cycle') tod = FIXED_TOD[bgMode]; }
   function pickBird() {
@@ -866,7 +1175,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     const gy = prevGy === null ? (lo + hi) / 2 + rand(-16, 16) : clamp(prevGy + rand(-52, 52), lo, hi);
     prevGy = gy;
     const prev = cols[cols.length - 1];
-    if (prev) bonus.push({ x: (prev.x + x) / 2 + COLW / 2, y: Math.round(clamp((prev.gy + gy) / 2 + rand(-26, 26), 22, SKY_H - 22)), taken: false, special: Math.random() < SPECIAL_CHANCE });
+    if (prev) {
+      const bx = (prev.x + x) / 2 + COLW / 2, by = Math.round(clamp((prev.gy + gy) / 2 + rand(-26, 26), 22, SKY_H - 22));
+      if (gameMode === 'chaos' && spawnCount > 2 && Math.random() < CHAOS_CHANCE) items.push({ x: bx, y: by, kind: rollItem(), taken: false });
+      else bonus.push({ x: bx, y: by, taken: false, special: Math.random() < SPECIAL_CHANCE });
+    }
     cols.push({ x, gy: Math.round(gy), gap, scored: false });
   }
   function fillCols() {
@@ -880,11 +1193,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     return dx * dx + dy * dy < r * r;
   }
   function hitsColumn(c) {
-    const top = c.gy - c.gap / 2, bot = c.gy + c.gap / 2;
-    return circleRect(BIRD_X, bird.y, HIT_R, c.x, -40, COLW, top + 40) ||
-           circleRect(BIRD_X, bird.y, HIT_R, c.x - CAP_X, top - CAP_H, COLW + 2 * CAP_X, CAP_H) ||
-           circleRect(BIRD_X, bird.y, HIT_R, c.x, bot, COLW, H) ||
-           circleRect(BIRD_X, bird.y, HIT_R, c.x - CAP_X, bot, COLW + 2 * CAP_X, CAP_H);
+    const top = c.gy - c.gap / 2, bot = c.gy + c.gap / 2, r = hitR();
+    return circleRect(BIRD_X, bird.y, r, c.x, -40, COLW, top + 40) ||
+           circleRect(BIRD_X, bird.y, r, c.x - CAP_X, top - CAP_H, COLW + 2 * CAP_X, CAP_H) ||
+           circleRect(BIRD_X, bird.y, r, c.x, bot, COLW, H) ||
+           circleRect(BIRD_X, bird.y, r, c.x - CAP_X, bot, COLW + 2 * CAP_X, CAP_H);
   }
 
   // Flow
@@ -893,14 +1206,16 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     settingsBtn.hidden = busy; shopBtn.hidden = busy;
   }
   function updateWallet() { walletN.textContent = wallet.coins; shopCoins.textContent = wallet.coins; }
-  function addCoins(n) { wallet.coins += n; runCoins += n; saveWallet(); updateWallet(); }
+  function addCoins(n) { wallet.coins += n; runCoins += n; prog.stats.earned += n; saveWallet(); updateWallet(); }
   const reviveCost = () => 10 * Math.pow(2, revives);
   function doRevive() {
     const cost = reviveCost();
     if (state !== 'dead' || wallet.coins < cost) return;
-    wallet.coins -= cost; revives++; saveWallet(); updateWallet();
+    wallet.coins -= cost; revives++; prog.stats.revives++; saveWallet(); updateWallet(); saveProg();
     cols = cols.filter(c => c.x + COLW + CAP_X < BIRD_X - 14 || c.x - CAP_X > BIRD_X + 70);
     bonus = bonus.filter(b => Math.abs(b.x - BIRD_X) > 20);
+    items = items.filter(b => Math.abs(b.x - BIRD_X) > 20);
+    invuln = 0;
     fillCols();
     const next = cols.find(c => c.x > BIRD_X);
     bird.y = next ? next.gy : BIRD_Y; bird.vy = 0; bird.rot = 0;
@@ -911,23 +1226,34 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   function reset() {
     state = 'ready';
-    bird = { y: settingsOpen || shopOpen ? BIRD_Y_MENU : BIRD_Y, vy: 0, rot: 0, wing: 0 };
-    cols = []; bonus = []; prevGy = null; spawnCount = 0; runCoins = 0; revives = 0; fillCols();
+    bird = { y: anyOpen() ? BIRD_Y_MENU : BIRD_Y, vy: 0, rot: 0, wing: 0 };
+    cols = []; bonus = []; items = []; effects = {}; invuln = 0; runCounted = false; runMedal = -1;
+    prevGy = null; spawnCount = 0; runCoins = 0; revives = 0; fillCols(); syncFx();
     resumeHint.hidden = true;
     score = 0; isNew = false; panelShown = false; autoFlap = 0;
     pickBird();
     scoreEl.textContent = '0'; scoreEl.hidden = true;
-    overEl.hidden = true; readyEl.hidden = settingsOpen || shopOpen;
-    bestReadyWrap.hidden = best <= 0; bestReady.textContent = best;
+    overEl.hidden = true; readyEl.hidden = anyOpen();
+    bestReadyWrap.hidden = modeBest() <= 0; bestReady.textContent = modeBest();
+    $('readyText').textContent = gameMode === 'chaos'
+      ? 'Chaos mode! Green orbs are power-ups, purple orbs are debuffs and ? boxes could be anything.'
+      : 'Tap, click or press Space to flap. Each pipe earns a coin. Floating coins are a bonus.';
     syncUI();
   }
   function start() { state = 'playing'; readyEl.hidden = true; scoreEl.hidden = false; syncUI(); }
-  function flap() { bird.vy = FLAP; bird.wing = 1; tone(520, 900, 0.08, 'square', 0.05); }
+  function flap() { bird.vy = FLAP; bird.wing = 1; tone(520, 900, 0.08, 'square', 0.05); buzz('flap'); }
   function die() {
     state = 'dead'; deadAt = performance.now(); curSpeed = 0;
     bird.vy = -80;
     flash = 1; shake = reduce ? 0 : 0.3;
-    if (score > best) { best = score; isNew = true; saveBest(); }
+    if (score > modeBest()) {
+      if (gameMode === 'chaos') prog.bestChaos = score; else { best = score; saveBest(); }
+      isNew = true;
+    }
+    const m = medalFor(score);
+    if (m > runMedal) { if (runMedal >= 0) prog.medals[runMedal]--; prog.medals[m]++; runMedal = m; }
+    saveProg();
+    buzz('crash');
     noise(0.14, 0.18);
     tone(200, 60, 0.14, 'square', 0.08);
     tone(880, 110, 0.6, 'triangle', 0.06, 0.28);
@@ -935,8 +1261,13 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   function showPanel() {
     panelShown = true;
-    scoreEnd.textContent = score; bestEnd.textContent = best;
+    scoreEnd.textContent = score; bestEnd.textContent = modeBest();
     newBestEl.hidden = !isNew;
+    const md = medalFor(score), medalEl = $('medal');
+    medalEl.className = 'medal' + (md < 0 ? ' none' : '');
+    medalEl.style.setProperty('--mc', md < 0 ? 'transparent' : MEDALS[md].c);
+    medalEl.title = md < 0 ? 'No medal' : MEDALS[md].name + ' medal';
+    $('nextMedal').textContent = md < 3 ? (MEDALS[md + 1].at - score) + ' more for ' + MEDALS[md + 1].name.toLowerCase() : 'Top medal!';
     runCoinsEl.textContent = '+' + runCoins + ' coins this run, ' + wallet.coins + ' total';
     const cost = reviveCost();
     reviveBtn.textContent = 'REVIVE · ' + cost;
@@ -998,6 +1329,12 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     musicOptsEl.appendChild(b);
     return b;
   });
+  const vibBtns = [[false, 'Off'], [true, 'On']].map(o => {
+    const b = mkBtn('opt', o[1]);
+    b.addEventListener('click', () => { vibOn = o[0]; saveSettings(); syncSettingsUI(); buzz('item'); });
+    $('vibOpts').appendChild(b);
+    return b;
+  });
   const birdBtns = [];
   (() => {
     const r = mkBtn('opt', 'Random');
@@ -1049,6 +1386,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     birdBtns.forEach((b, i) => b.setAttribute('aria-checked', String(i === 0 ? birdMode === 'random' : birdMode === i - 1)));
     bgNote.textContent = BG_NOTES[bgMode];
     musicBtns.forEach((b, i) => b.setAttribute('aria-checked', String((i === 1) === musicOn)));
+    vibBtns.forEach((b, i) => b.setAttribute('aria-checked', String((i === 1) === vibOn)));
     seasonBtns.forEach((b, i) => {
       b.setAttribute('aria-checked', String(SEASONS[i][0] === seasonMode));
       b.disabled = !ownsSeason(SEASONS[i][0]);
@@ -1067,6 +1405,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   function openSettings() {
     if (state === 'playing' || state === 'revive') return;
     if (shopOpen) closeShop();
+    if (xOpen) closeX(true);
     settingsOpen = true;
     if (state === 'dead') reset();
     settingsEl.hidden = false; readyEl.hidden = true; overEl.hidden = true;
@@ -1150,6 +1489,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   function openShop() {
     if (state === 'playing' || state === 'revive') return;
     if (settingsOpen) closeSettings();
+    if (xOpen) closeX(true);
     shopOpen = true;
     if (state === 'dead') reset();
     renderShop();
@@ -1170,9 +1510,123 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   overShop.addEventListener('click', openShop);
   reviveBtn.addEventListener('click', () => { audio(); doRevive(); try { frame.focus({ preventScroll: true }); } catch (e) {} });
 
+  // Missions, stats and daily reward panels
+  const xPanels = { missions: $('missions'), stats: $('stats'), daily: $('daily') };
+  const xFocus = { missions: 'missionsDone', stats: 'statsDone', daily: 'dailyClaim' };
+  const missionsBtn = $('missionsBtn'), statsBtn = $('statsBtn'), menuEl = $('menu');
+  function openX(name) {
+    if (state === 'playing' || state === 'revive') return;
+    if (settingsOpen) closeSettings();
+    if (shopOpen) closeShop();
+    if (xOpen) closeX(true);
+    xOpen = name;
+    if (state === 'dead') reset();
+    if (name === 'missions') renderMissions(); else if (name === 'stats') renderStats(); else renderDaily();
+    xPanels[name].hidden = false; readyEl.hidden = true; overEl.hidden = true;
+    try { $(xFocus[name]).focus({ preventScroll: true }); } catch (e) {}
+  }
+  function closeX(quiet) {
+    if (!xOpen) return;
+    xPanels[xOpen].hidden = true; xOpen = null;
+    if (state === 'ready') readyEl.hidden = false;
+    if (!quiet) { try { frame.focus({ preventScroll: true }); } catch (e) {} }
+  }
+  function syncDots() {
+    const n = prog.missions.filter(missionDone).length + (dailyState().ready ? 1 : 0);
+    missionsBtn.textContent = 'Missions';
+    if (n) { const d = document.createElement('span'); d.className = 'dot'; missionsBtn.appendChild(d); }
+    missionsBtn.setAttribute('aria-label', n ? 'Missions, ' + n + ' reward' + (n > 1 ? 's' : '') + ' ready' : 'Missions');
+  }
+  function renderMissions() {
+    $('misCoins').textContent = wallet.coins;
+    const dEl = $('misDaily'), s = dailyState();
+    dEl.textContent = '';
+    const line = document.createElement('div'); line.className = 'daily-line';
+    const nm = document.createElement('span'); nm.className = 'nm';
+    nm.textContent = s.ready ? 'Day ' + s.streak + ' reward: ' + s.amount + ' coins' : 'Claimed today. Streak: ' + s.streak + ' day' + (s.streak === 1 ? '' : 's');
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'buy';
+    b.textContent = s.ready ? 'Claim' : 'Tomorrow'; b.disabled = !s.ready;
+    b.addEventListener('click', () => { claimDaily(); renderMissions(); });
+    line.append(nm, b); dEl.appendChild(line);
+    const list = $('misList');
+    list.textContent = '';
+    prog.missions.forEach((m, i) => {
+      const row = document.createElement('div'); row.className = 'mis';
+      const top = document.createElement('div'); top.className = 'mis-top';
+      const t = document.createElement('span'); t.className = 'nm'; t.textContent = MISSIONS[m.type].text(m.target);
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'buy';
+      const done = missionDone(m);
+      c.textContent = done ? 'Claim +' + m.reward : '+' + m.reward; c.disabled = !done;
+      c.addEventListener('click', () => claimMission(i));
+      top.append(t, c);
+      const bar = document.createElement('div'); bar.className = 'bar';
+      const fill = document.createElement('i'); fill.style.width = Math.round(100 * m.progress / m.target) + '%'; bar.appendChild(fill);
+      const p = document.createElement('div'); p.className = 'prog';
+      p.textContent = MISSIONS[m.type].best ? 'Best so far: ' + m.progress + ' / ' + m.target : m.progress + ' / ' + m.target;
+      row.append(top, bar, p); list.appendChild(row);
+    });
+  }
+  function fmtTime(s) {
+    s = Math.floor(s);
+    const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60;
+    return h ? h + 'h ' + m + 'm' : m + 'm ' + (s % 60) + 's';
+  }
+  function renderStats() {
+    const mr = $('medalRow'); mr.textContent = '';
+    MEDALS.forEach((d, i) => {
+      const c = document.createElement('div');
+      const md = document.createElement('span'); md.className = 'medal'; md.style.setProperty('--mc', d.c);
+      const n = document.createElement('b'); n.textContent = prog.medals[i];
+      c.append(md, d.name, n); mr.appendChild(c);
+    });
+    const st = prog.stats, rows = [
+      ['Best score (Classic)', best], ['Best score (Chaos)', prog.bestChaos], ['Games played', st.games], ['Pipes passed', st.pipes],
+      ['Coins earned', st.earned], ['Floating coins grabbed', st.pickups], ['Sparkly coins grabbed', st.specials],
+      ['Mystery boxes opened', st.boxes], ['Power-ups caught', st.powerups], ['Debuffs hit', st.debuffs],
+      ['Missions completed', st.missions], ['Revives used', st.revives], ['Longest daily streak', st.bestStreak], ['Time flying', fmtTime(st.time)]
+    ];
+    const dl = $('statList'); dl.textContent = '';
+    rows.forEach(r => {
+      const dt = document.createElement('dt'); dt.textContent = r[0];
+      const dd = document.createElement('dd'); dd.textContent = r[1];
+      dl.append(dt, dd);
+    });
+  }
+  function renderDaily() {
+    const s = dailyState();
+    $('dailyText').textContent = s.ready
+      ? (s.streak > 1 ? 'Day ' + s.streak + ' in a row! ' : 'Welcome back! ') + 'Come back every day for bigger rewards.'
+      : 'Already claimed today. Come back tomorrow!';
+    const days = $('dailyDays'); days.textContent = '';
+    const cur = ((s.ready ? s.streak : s.streak) - 1) % 7;
+    DAILY.forEach((amt, i) => {
+      const c = document.createElement('span');
+      c.className = i < cur || (!s.ready && i === cur) ? 'got' : i === cur ? 'now' : '';
+      c.textContent = 'Day ' + (i + 1);
+      const b = document.createElement('b'); b.textContent = amt; c.appendChild(b);
+      days.appendChild(c);
+    });
+    const btn = $('dailyClaim');
+    btn.disabled = !s.ready;
+    btn.textContent = s.ready ? 'CLAIM +' + s.amount : 'CLAIMED';
+  }
+  missionsBtn.addEventListener('click', () => { audio(); openX('missions'); });
+  statsBtn.addEventListener('click', () => { audio(); openX('stats'); });
+  $('missionsDone').addEventListener('click', () => closeX());
+  $('statsDone').addEventListener('click', () => closeX());
+  $('dailyLater').addEventListener('click', () => closeX());
+  $('dailyClaim').addEventListener('click', () => { audio(); claimDaily(); closeX(); });
+  const modeBtns = { classic: $('modeClassic'), chaos: $('modeChaos') };
+  function syncModes() { Object.keys(modeBtns).forEach(k => modeBtns[k].setAttribute('aria-checked', String(k === gameMode))); }
+  Object.keys(modeBtns).forEach(k => modeBtns[k].addEventListener('click', () => {
+    if (state !== 'ready') return;
+    gameMode = k; saveSettings(); syncModes(); reset();
+    try { frame.focus({ preventScroll: true }); } catch (e) {}
+  }));
+
   // Input
   frame.addEventListener('pointerdown', e => {
-    if (settingsOpen || shopOpen || e.target.closest('button')) return;
+    if (anyOpen() || e.target.closest('button') || e.target.closest('.menu')) return;
     e.preventDefault();
     try { frame.focus({ preventScroll: true }); } catch (err) {}
     press();
@@ -1180,6 +1634,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   window.addEventListener('keydown', e => {
     if (settingsOpen) { if (e.code === 'Escape') { e.preventDefault(); closeSettings(); } return; }
     if (shopOpen) { if (e.code === 'Escape') { e.preventDefault(); closeShop(); } return; }
+    if (xOpen) { if (e.code === 'Escape') { e.preventDefault(); closeX(); } return; }
     if (e.code === 'KeyR' && state === 'dead' && panelShown) { e.preventDefault(); doRevive(); return; }
     if (e.target && e.target.closest && e.target.closest('button')) return;
     if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW' || (e.code === 'Enter' && state === 'dead')) {
@@ -1280,10 +1735,14 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (shake > 0) shake = Math.max(0, shake - dt);
     if (flash > 0) flash = Math.max(0, flash - dt * 3);
     bird.wing = Math.max(0, bird.wing - dt / 0.24);
+    const menuHide = state !== 'ready' || anyOpen();
+    if (menuEl.hidden !== menuHide) menuEl.hidden = menuHide;
+    const fxHide = state !== 'playing' && state !== 'revive';
+    if (fxbar.hidden !== fxHide) fxbar.hidden = fxHide;
 
     if (state === 'ready') {
       scroll += 24 * dt; curSpeed = 24;
-      bird.y = (settingsOpen || shopOpen ? BIRD_Y_MENU : BIRD_Y) + Math.round(Math.sin(t * 5) * 3);
+      bird.y = (anyOpen() ? BIRD_Y_MENU : BIRD_Y) + Math.round(Math.sin(t * 5) * 3);
       bird.rot = 0;
       autoFlap += dt;
       if (autoFlap > 0.4) { autoFlap = 0; bird.wing = 1; }
@@ -1298,9 +1757,14 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     }
 
     if (state === 'playing') {
-      const speed = BASE_SPEED + Math.min(score, RAMP_CAP) * SPEED_RAMP;
+      if (!runCounted) { runCounted = true; prog.stats.games++; track('games', 1); }
+      prog.stats.time += dt;
+      for (const k in effects) { effects[k] -= dt; if (effects[k] <= 0) delete effects[k]; }
+      if (invuln > 0) invuln = Math.max(0, invuln - dt);
+      syncFx();
+      const speed = (BASE_SPEED + Math.min(score, RAMP_CAP) * SPEED_RAMP) * (effects.slow ? 0.65 : effects.fast ? 1.35 : 1);
       scroll += speed * dt; curSpeed = speed;
-      bird.vy = Math.min(MAX_FALL, bird.vy + GRAV * dt);
+      bird.vy = Math.min(MAX_FALL, bird.vy + GRAV * (effects.heavy ? 1.35 : 1) * dt);
       bird.y += bird.vy * dt;
       bird.rot += (clamp(bird.vy / 240, -0.4, 1.4) - bird.rot) * Math.min(1, dt * 14);
       if (bird.y < 6) { bird.y = 6; if (bird.vy < 0) bird.vy = 0; }
@@ -1310,10 +1774,23 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       fillCols();
       for (const b of bonus) b.x -= speed * dt;
       bonus = bonus.filter(b => b.x > -10);
+      for (const it of items) it.x -= speed * dt;
+      items = items.filter(it => it.x > -12 && !it.taken);
+      const mult = effects.double ? 2 : 1, pr = hitR();
+      if (effects.magnet) for (const b of bonus) {
+        const dx = BIRD_X - b.x, dy = bird.y - b.y;
+        if (!b.taken && dx * dx + dy * dy < 75 * 75) { b.x += dx * Math.min(1, dt * 6); b.y += dy * Math.min(1, dt * 6); }
+      }
+      for (const it of items) {
+        const dx = it.x - BIRD_X, dy = it.y - bird.y;
+        if (dx * dx + dy * dy < (pr + 8) * (pr + 8)) { it.taken = true; collectItem(it); }
+      }
       for (const b of bonus) {
         const dx = b.x - BIRD_X, dy = b.y - bird.y;
-        if (!b.taken && dx * dx + dy * dy < (HIT_R + 10) * (HIT_R + 10)) {
-          b.taken = true; addCoins(b.special ? SPECIAL_VALUE : BONUS_VALUE); coinBurst(b.x, b.y, b.special);
+        if (!b.taken && dx * dx + dy * dy < (pr + 10) * (pr + 10)) {
+          b.taken = true; addCoins((b.special ? SPECIAL_VALUE : BONUS_VALUE) * mult); coinBurst(b.x, b.y, b.special);
+          prog.stats.pickups++; track('pickups', 1);
+          if (b.special) { prog.stats.specials++; track('specials', 1); }
           if (b.special) tone(1047, 2093, 0.25, 'triangle', 0.06, 0.1);
           tone(1568, 1568, 0.05, 'square', 0.04); tone(2093, 2093, 0.1, 'square', 0.04, 0.05);
         }
@@ -1321,15 +1798,30 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
       for (const c of cols) {
         if (!c.scored && c.x + COLW / 2 < BIRD_X) {
-          c.scored = true; score++; addCoins(1);
+          c.scored = true; score++; addCoins(mult);
           scoreEl.textContent = score;
+          prog.stats.pipes++; track('pipes', 1); track('run', score, true);
+          if (gameMode === 'chaos') track('chaosRun', score, true);
+          const md = MEDALS.findIndex(d => d.at === score);
+          if (md >= 0) { toast(MEDALS[md].name.toUpperCase() + ' MEDAL!'); buzz('win'); }
           if (!reduce) { scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump'); }
           tone(988, 988, 0.06, 'square', 0.04);
           tone(1319, 1319, 0.12, 'square', 0.04, 0.06);
         }
       }
-      if (bird.y + HIT_R >= SKY_H) { bird.y = SKY_H - HIT_R; die(); return; }
-      for (const c of cols) { if (hitsColumn(c)) { die(); return; } }
+      const hitGround = bird.y + pr >= SKY_H;
+      const hitPipe = !hitGround && cols.some(hitsColumn);
+      if (hitGround || hitPipe) {
+        if (hitGround) bird.y = SKY_H - pr;
+        if (invuln > 0 || effects.shield) {
+          if (invuln <= 0) {
+            delete effects.shield; invuln = 1.2; flash = 0.4; shake = reduce ? 0 : 0.2;
+            toast('SHIELD BROKE!', 'bad'); buzz('hit'); noise(0.1, 0.12); tone(300, 900, 0.2, 'triangle', 0.06);
+          }
+          if (hitPipe) invuln = Math.max(invuln, 0.15);
+          if (hitGround) bird.vy = FLAP;
+        } else { die(); return; }
+      }
       return;
     }
 
@@ -1559,6 +2051,24 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     }
   }
 
+  function drawItem(it) {
+    const d = ITEMS[it.kind], cx = Math.round(it.x), cy = Math.round(it.y + Math.sin(t * 4 + it.y) * 1.2);
+    ctx.globalAlpha = 0.3 + 0.2 * Math.sin(t * 6);
+    disc(cx, cy, 10, it.kind === 'box' ? '#ffd23f' : d.good ? '#8aff6a' : '#ff4a9a');
+    ctx.globalAlpha = 1;
+    let icon, ic;
+    if (it.kind === 'box') {
+      rect(cx - 6, cy - 6, 13, 13, INK); rect(cx - 5, cy - 5, 11, 11, '#c07a2a');
+      rect(cx - 5, cy - 5, 11, 2, '#e8a850'); rect(cx - 5, cy + 4, 11, 1, '#8a5018');
+      icon = BOX_ICON; ic = '#ffe066';
+    } else {
+      disc(cx, cy, 6, INK); disc(cx, cy, 5, d.col);
+      icon = d.icon; ic = '#ffffff';
+    }
+    ctx.fillStyle = ic;
+    icon.forEach((row, y) => { for (let x = 0; x < 5; x++) if (row[x] === '#') ctx.fillRect(cx - 2 + x, cy - 2 + y, 1, 1); });
+  }
+
   function drawGround() {
     const gy = SKY_H, sc = Math.floor(scroll);
     rect(0, gy, W, 1, INK);
@@ -1583,10 +2093,18 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     bctx.imageSmoothingEnabled = false;
     bctx.translate((BIRD_X + shX) * BS, (Math.round(bird.y) + shY) * BS);
     bctx.rotate(bird.rot);
-    const k = BS * BIRD_SCALE;
-    bctx.globalAlpha = (sk && sk.alpha) || 1;
+    const k = BS * BIRD_SCALE * (effects.tiny ? 0.65 : effects.big ? 1.4 : 1);
+    const blink = invuln > 0 && Math.floor(t * 12) % 2 === 0;
+    bctx.globalAlpha = ((sk && sk.alpha) || 1) * (blink ? 0.35 : 1);
     bctx.drawImage(spr, -(13 + PADX * PX) * k, -(10 + PADT * PX) * k, spr.width * k, spr.height * k);
     bctx.globalAlpha = 1;
+    if (effects.shield && state !== 'dead') {
+      bctx.rotate(-bird.rot);
+      bctx.beginPath(); bctx.arc(0, 0, (hitR() + 7) * BS, 0, Math.PI * 2);
+      bctx.fillStyle = 'rgba(120, 190, 255, 0.18)'; bctx.fill();
+      bctx.lineWidth = Math.max(1, BS * 0.9);
+      bctx.strokeStyle = 'rgba(160, 215, 255, ' + (0.7 + 0.3 * Math.sin(t * 8)).toFixed(2) + ')'; bctx.stroke();
+    }
   }
 
   function draw() {
@@ -1606,8 +2124,14 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     drawHills();
     for (const c of cols) drawColumn(c);
     for (const b of bonus) if (!b.taken) drawCoin(b);
+    for (const it of items) if (!it.taken) drawItem(it);
     drawGround();
     drawParts();
+    if (effects.fog && state === 'playing') {
+      const g = ctx.createRadialGradient(BIRD_X, bird.y, 16, BIRD_X, bird.y, 48);
+      g.addColorStop(0, 'rgba(14, 18, 28, 0)'); g.addColorStop(1, 'rgba(14, 18, 28, 0.94)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, SKY_H);
+    }
     drawBird();
     ctx.restore();
     if (flash > 0) { ctx.fillStyle = S(PAPER, Math.min(1, flash) * 0.8); ctx.fillRect(0, 0, W, H); }
@@ -1625,6 +2149,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       canvas.height = H; ctx.imageSmoothingEnabled = false;
       for (const c of cols) c.gy += Math.round(dy / 2);
       for (const b of bonus) b.y += Math.round(dy / 2);
+      for (const it of items) it.y += Math.round(dy / 2);
       if (state !== 'playing') bird.y += Math.round(dy / 2);
       genStars();
     }
@@ -1663,6 +2188,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   document.addEventListener('visibilitychange', () => {
     last = 0;
+    if (document.hidden) saveProg();
+    else { syncDots(); if (state === 'ready' && !anyOpen() && dailyState().ready) openX('daily'); }
     if (document.hidden) stopMusic(); else if (musicOn && actx) startMusic();
     if (!document.hidden) syncTime();
   });
@@ -1674,8 +2201,12 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   syncTime();
   applyBg();
   syncSettingsUI();
+  ensureMissions(); saveProg();
+  syncModes();
   reset();
   resize();
+  syncDots();
+  if (dailyState().ready) openX('daily');
   draw();
   requestAnimationFrame(loop);
 })();

@@ -44,7 +44,7 @@ jobs:
       - name: Create the Android project
         run: |
           npm init -y
-          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
+          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0 @capacitor/haptics@6.0.2
           mkdir -p www
           cp game.html www/index.html
           cat > capacitor.config.json <<'JSON'
