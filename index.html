@@ -12,7 +12,7 @@ img { max-width: 100%; }
 </head>
 <body>
 <title>Happy Bird</title>
-<meta name="app-version" content="1.6.0">
+<meta name="app-version" content="1.7.0">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -434,6 +434,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
     <div id="menu" class="menu">
       <div class="modes" role="radiogroup" aria-label="Game mode">
+        <button id="modeEasy" class="opt" type="button" role="radio" aria-checked="false">Easy</button>
         <button id="modeClassic" class="opt" type="button" role="radio" aria-checked="true">Classic</button>
         <button id="modeChaos" class="opt" type="button" role="radio" aria-checked="false">Chaos</button>
       </div>
@@ -500,6 +501,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     <section id="shop" class="panel card" role="dialog" aria-label="Shop" hidden>
       <div class="panel-head"><h2>SHOP</h2><span class="count">COINS <b id="shopCoins">0</b></span></div>
       <div class="group"><h3>Limited time</h3><div id="shopLimited"></div></div>
+      <div class="group"><h3>Abilities</h3><div id="shopAbilities"></div></div>
       <div class="group"><h3>Themes</h3><div id="shopSeasons"></div></div>
       <div class="group"><h3>Bird colors</h3><div id="shopBirds"></div></div>
       <div class="group"><h3>Special birds</h3><div id="shopSkins"></div></div>
@@ -525,6 +527,14 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       <h2>VERSUS</h2>
       <p class="shop-note">Race someone online. You both get the same pipes and see each other as a ghost bird. Highest score wins.</p>
       <div class="group"><h3>Quick match</h3><button id="vsFind" class="btn alt" type="button">FIND MATCH</button></div>
+      <div class="group">
+        <h3>Play a bot</h3>
+        <div class="opts">
+          <button id="botEasy" class="opt" type="button">Easy bot</button>
+          <button id="botNormal" class="opt" type="button">Normal bot</button>
+          <button id="botHard" class="opt" type="button">Hard bot</button>
+        </div>
+      </div>
       <div class="group"><h3>Play a friend</h3><button id="vsHost" class="btn ghost" type="button">CREATE ROOM</button></div>
       <div class="group">
         <h3>Join a friend</h3>
@@ -711,7 +721,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (SEASONS.some(o => o[0] === s.season)) seasonMode = s.season;
     if (typeof s.music === 'boolean') musicOn = s.music;
     if (typeof s.vib === 'boolean') vibOn = s.vib;
-    if (s.mode === 'chaos') gameMode = 'chaos';
+    if (s.mode === 'chaos' || s.mode === 'easy') gameMode = s.mode;
     if (typeof s.skin === 'string') skinMode = s.skin;
     if (typeof s.hat === 'string') hatMode = s.hat;
     if (s.bird === 'random' || (Number.isInteger(s.bird) && s.bird >= 0 && s.bird < BIRDS.length)) birdMode = s.bird;
@@ -815,7 +825,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   const SEASON_PRICE = { spring: 60, autumn: 60, valentine: 80, lunar: 100, halloween: 120, christmas: 120, beach: 80, underwater: 100, candy: 100, space: 150 };
   const BIRD_PRICE = [0, 15, 15, 20, 25, 25, 35, 40];
   const SHOP_KEY = 'happy-bird-shop';
-  const wallet = { coins: 0, seasons: [], birds: [0], skins: [], hats: [] };
+  // Coin Magnet ability: each level pulls floating coins in from farther away, in every mode
+  const MAGNET_PRICE = [150, 350, 700], MAGNET_RANGE = [0, 26, 38, 52];
+  const wallet = { coins: 0, seasons: [], birds: [0], skins: [], hats: [], magnet: 0 };
   try {
     const w = JSON.parse(localStorage.getItem(SHOP_KEY) || 'null');
     if (w) {
@@ -825,6 +837,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       if (!wallet.birds.includes(0)) wallet.birds.unshift(0);
       wallet.skins = Array.isArray(w.skins) ? w.skins.filter(k => SKINS[k]) : [];
       wallet.hats = Array.isArray(w.hats) ? w.hats.filter(k => HATS[k]) : [];
+      wallet.magnet = Math.max(0, Math.min(3, w.magnet | 0));
     }
   } catch (e) {}
   const saveWallet = () => { try { localStorage.setItem(SHOP_KEY, JSON.stringify(wallet)); } catch (e) {} };
@@ -980,8 +993,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
   // Saved progress: stats, missions, daily reward
   const PROG_KEY = 'happy-bird-progress';
-  const STAT_KEYS = ['games', 'pipes', 'earned', 'pickups', 'specials', 'boxes', 'powerups', 'debuffs', 'missions', 'revives', 'bestStreak', 'time', 'vsGames', 'vsWins'];
-  const prog = { stats: {}, medals: [0, 0, 0, 0, 0, 0], bestChaos: 0, missions: [], missionDay: '', daily: { last: '', streak: 0 } };
+  const STAT_KEYS = ['games', 'pipes', 'earned', 'pickups', 'specials', 'boxes', 'powerups', 'debuffs', 'missions', 'revives', 'bestStreak', 'time', 'vsGames', 'vsWins', 'botWins'];
+  const prog = { stats: {}, medals: [0, 0, 0, 0, 0, 0], bestChaos: 0, bestEasy: 0, missions: [], missionDay: '', daily: { last: '', streak: 0 } };
   STAT_KEYS.forEach(k => { prog.stats[k] = 0; });
   // Daily missions: 5 random ones each day. "levels" are the possible targets, harder ones pay more.
   const MISSIONS = {
@@ -1004,6 +1017,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       if (p.stats) STAT_KEYS.forEach(k => { prog.stats[k] = num(p.stats[k]); });
       if (Array.isArray(p.medals)) prog.medals = MEDALS.map((d, i) => i).map(i => Math.floor(num(p.medals[i])));
       prog.bestChaos = Math.floor(num(p.bestChaos));
+      prog.bestEasy = Math.floor(num(p.bestEasy));
       if (typeof p.missionDay === 'string' && Array.isArray(p.missions)) {
         prog.missionDay = p.missionDay;
         prog.missions = p.missions.filter(m => m && MISSIONS[m.type] && num(m.target) > 0).slice(0, MISSIONS_PER_DAY)
@@ -1013,7 +1027,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     }
   } catch (e) {}
   const saveProg = () => { try { localStorage.setItem(PROG_KEY, JSON.stringify(prog)); } catch (e) {} };
-  const modeBest = () => (gameMode === 'chaos' ? prog.bestChaos : best);
+  const modeBest = () => (gameMode === 'chaos' ? prog.bestChaos : gameMode === 'easy' ? prog.bestEasy : best);
+  // Easy mode: wider gaps, slower pipes, softer gravity. Versus always uses Classic rules.
+  const isEasy = () => gameMode === 'easy' && !vs;
   function grant(n) { wallet.coins += n; prog.stats.earned += n; saveWallet(); updateWallet(); }
 
   const todayKey = () => dayKey(trustedNow() || new Date());
@@ -1224,7 +1240,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
   // Columns
   function spawn(x) {
-    const gap = 2 * Math.round(Math.max(GAP_MIN, GAP_START - spawnCount * GAP_STEP) / 2);
+    const gapStart = isEasy() ? 104 : GAP_START, gapMin = isEasy() ? 78 : GAP_MIN;
+    const gap = 2 * Math.round(Math.max(gapMin, gapStart - spawnCount * GAP_STEP) / 2);
     spawnCount++;
     const lo = gap / 2 + 26, hi = SKY_H - 22 - gap / 2;
     // In Versus both players use the same seeded random numbers, so they get the same pipes
@@ -1298,6 +1315,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     bestReadyWrap.hidden = modeBest() <= 0; bestReady.textContent = modeBest();
     $('readyText').textContent = gameMode === 'chaos'
       ? 'Chaos mode! Every glowing orb is a surprise: it could help you or hurt you. ? boxes might hold coins.'
+      : gameMode === 'easy'
+      ? 'Easy mode: wider gaps, slower pipes and softer gravity. Great for practice! (No medals.)'
       : 'Tap, click or press Space to flap. Each pipe earns a coin. Floating coins are a bonus.';
     syncUI();
   }
@@ -1309,10 +1328,10 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     flash = 1; shake = reduce ? 0 : 0.3;
     if (vs) vsSend({ t: 'dead', sc: score, d: dist });
     if (!vs && score > modeBest()) {
-      if (gameMode === 'chaos') prog.bestChaos = score; else { best = score; saveBest(); }
+      if (gameMode === 'chaos') prog.bestChaos = score; else if (gameMode === 'easy') prog.bestEasy = score; else { best = score; saveBest(); }
       isNew = true;
     }
-    const m = medalFor(score);
+    const m = isEasy() ? -1 : medalFor(score);
     if (m > runMedal) { if (runMedal < 0) track('medals', 1); else prog.medals[runMedal]--; prog.medals[m]++; runMedal = m; }
     saveProg();
     buzz('crash');
@@ -1325,11 +1344,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     panelShown = true;
     scoreEnd.textContent = score; bestEnd.textContent = modeBest();
     newBestEl.hidden = !isNew;
-    const md = medalFor(score), medalEl = $('medal');
+    const md = isEasy() ? -1 : medalFor(score), medalEl = $('medal');
     medalEl.className = 'medal' + (md < 0 ? ' none' : '');
     medalEl.style.setProperty('--mc', md < 0 ? 'transparent' : MEDALS[md].c);
     medalEl.title = md < 0 ? 'No medal' : MEDALS[md].name + ' medal';
-    $('nextMedal').textContent = md < MEDALS.length - 1 ? (MEDALS[md + 1].at - score) + ' more for ' + MEDALS[md + 1].name.toLowerCase() : 'Top medal!';
+    $('nextMedal').textContent = isEasy() ? 'No medals in Easy mode' : md < MEDALS.length - 1 ? (MEDALS[md + 1].at - score) + ' more for ' + MEDALS[md + 1].name.toLowerCase() : 'Top medal!';
     runCoinsEl.textContent = '+' + runCoins + ' coins this run, ' + wallet.coins + ' total';
     reviveBtn.hidden = overShop.hidden = !!vs;
     againBtn.textContent = vs ? 'REMATCH' : 'PLAY AGAIN';
@@ -1535,11 +1554,32 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       shopRow(THEMES[k].name, SEASON_PRICE[k], wallet.seasons.includes(k), null, () => buy('season', k, SEASON_PRICE[k]))));
     BIRDS.forEach((bd, i) => shopBirds.appendChild(
       shopRow(bd.name, BIRD_PRICE[i], wallet.birds.includes(i), { img: previewURL({ pal: bd }) }, () => buy('bird', i, BIRD_PRICE[i]))));
+    const ab = $('shopAbilities'), ml = wallet.magnet;
+    ab.textContent = '';
+    ab.appendChild(shopRow(ml < 3 ? 'Coin Magnet · level ' + (ml + 1) : 'Coin Magnet · max level', MAGNET_PRICE[ml], ml >= 3,
+      { img: magnetIcon() }, () => buy('magnet', ml + 1, MAGNET_PRICE[ml])));
+    const note = document.createElement('p'); note.className = 'shop-note';
+    note.textContent = ml ? 'Level ' + ml + ' of 3: pulls floating coins toward you in every mode.' : 'Pulls floating coins toward you in every mode. Upgrade it for more range.';
+    ab.appendChild(note);
     shopSkins.textContent = ''; shopHats.textContent = '';
     Object.keys(SKINS).filter(id => !SKINS[id].event).forEach(id => shopSkins.appendChild(
       shopRow(SKINS[id].name, SKINS[id].price, wallet.skins.includes(id), { img: previewURL(skinLook(id)) }, () => buy('skin', id, SKINS[id].price))));
     Object.keys(HATS).filter(id => !HATS[id].event).forEach(id => shopHats.appendChild(
       shopRow(HATS[id].name, HATS[id].price, wallet.hats.includes(id), { img: previewURL({ pal: BIRDS[0], hat: HATS[id] }) }, () => buy('hat', id, HATS[id].price))));
+  }
+  let magnetURL = null;
+  function magnetIcon() {   // little pixel-art magnet for the shop row
+    if (magnetURL) return magnetURL;
+    const art = ['.kkk.kkk.', '.krk.krk.', '.krk.krk.', '.krk.krk.', '.krkkkrk.', '.krrrrrk.', '..kkkkk..'];
+    const c = document.createElement('canvas'); c.width = 9; c.height = 9;
+    const g = c.getContext('2d');
+    art.forEach((row, y) => [...row].forEach((ch, x) => {
+      if (ch === '.') return;
+      g.fillStyle = ch === 'k' ? INK : (y < 1 ? '#d8d8d8' : '#e8463a');
+      g.fillRect(x, y + 1, 1, 1);
+    }));
+    g.fillStyle = '#e0e0e0'; g.fillRect(2, 2, 1, 1); g.fillRect(6, 2, 1, 1);
+    return (magnetURL = c.toDataURL());
   }
   function buy(kind, id, price) {
     if (wallet.coins < price) return;
@@ -1549,6 +1589,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (kind === 'season') { if (!wallet.seasons.includes(id)) wallet.seasons.push(id); seasonMode = id; applySeason(); }
     else if (kind === 'skin') { if (!wallet.skins.includes(id)) wallet.skins.push(id); skinMode = id; }
     else if (kind === 'hat') { if (!wallet.hats.includes(id)) wallet.hats.push(id); hatMode = id; }
+    else if (kind === 'magnet') { wallet.magnet = Math.min(3, id); }
     else { if (!wallet.birds.includes(id)) wallet.birds.push(id); birdMode = id; skinMode = 'none'; pickBird(); }
     saveWallet(); saveSettings(); renderShop(); syncSettingsUI();
     tone(880, 1760, 0.15, 'square', 0.05);
@@ -1595,7 +1636,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   function closeX(quiet) {
     if (!xOpen) return;
-    if (xOpen === 'versus' && vs && !vs.conn) vsLeave();   // closing the panel cancels a room nobody joined
+    if (xOpen === 'versus' && vs && !vs.conn && !vs.bot) vsLeave();   // closing the panel cancels a room nobody joined
     xPanels[xOpen].hidden = true; xOpen = null;
     if (state === 'ready') readyEl.hidden = false;
     if (!quiet) { try { frame.focus({ preventScroll: true }); } catch (e) {} }
@@ -1653,10 +1694,10 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       c.append(md, d.name, n); mr.appendChild(c);
     });
     const st = prog.stats, rows = [
-      ['Best score (Classic)', best], ['Best score (Chaos)', prog.bestChaos], ['Games played', st.games], ['Pipes passed', st.pipes],
+      ['Best score (Classic)', best], ['Best score (Chaos)', prog.bestChaos], ['Best score (Easy)', prog.bestEasy], ['Games played', st.games], ['Pipes passed', st.pipes],
       ['Coins earned', st.earned], ['Floating coins grabbed', st.pickups], ['Sparkly coins grabbed', st.specials],
       ['Mystery boxes opened', st.boxes], ['Power-ups caught', st.powerups], ['Debuffs hit', st.debuffs],
-      ['Missions completed', st.missions], ['Versus matches', st.vsGames], ['Versus wins', st.vsWins], ['Revives used', st.revives], ['Longest daily streak', st.bestStreak], ['Time flying', fmtTime(st.time)]
+      ['Missions completed', st.missions], ['Versus matches', st.vsGames], ['Versus wins', st.vsWins], ['Bot wins', st.botWins], ['Revives used', st.revives], ['Longest daily streak', st.bestStreak], ['Time flying', fmtTime(st.time)]
     ];
     const dl = $('statList'); dl.textContent = '';
     rows.forEach(r => {
@@ -1771,6 +1812,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     vs.rng = mulberry32(seed); vs.f = null;
     vs.them = { y: 0.5, ry: 0.5, d: 0, at: performance.now(), sc: 0, dead: false, left: false };
     vs.rematch = { me: false, them: false }; vs.recorded = false; vs.sendAcc = 0; vs.count = 3;
+    if (vs.bot) { vs.bot.y = BIRD_Y; vs.bot.vy = 0; vs.bot.acc = 0; }
     reset();
     readyEl.hidden = true;
     resumeHint.textContent = 'Get ready! 3'; resumeHint.hidden = false;
@@ -1790,7 +1832,42 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       if (vs.host && vs.rematch.me) vsStartMatch();
     }
   }
+  // Bots: a computer bird on the same pipes. It steers toward each gap, and every pipe it
+  // passes it has a small chance to crash. Harder bots crash less often.
+  const BOTS = { easy: { name: 'Easy bot', crash: 0.09 }, normal: { name: 'Normal bot', crash: 0.04 }, hard: { name: 'Hard bot', crash: 0.016 } };
+  function vsBot(level) {
+    if (vs) vsLeave();
+    vs = { host: true, bot: { ...BOTS[level], level, y: BIRD_Y, vy: 0, acc: 0 }, code: null, peer: null, conn: null, them: null, rematch: { me: false, them: false } };
+    vsBegin(Math.floor(Math.random() * 2147483647));
+  }
+  function botCrash() {
+    const g = vs.them;
+    g.dead = true;
+    if (state === 'playing') toast('BOT CRASHED! (' + g.sc + ')', 'good');
+    if (state === 'dead' && panelShown) vsShowResult();
+  }
+  function botTick(dt) {
+    const b = vs.bot, g = vs.them;
+    if (g.dead) return;
+    if (state === 'playing') {
+      // Aim a little below the middle of the next gap; flap when falling past that point
+      const next = cols.find(c => c.x + COLW + CAP_X > BIRD_X - 18);
+      const target = next ? next.gy + 7 : SKY_H * 0.5;
+      b.vy = Math.min(MAX_FALL, b.vy + GRAV * dt);
+      b.y += b.vy * dt;
+      if (b.y > target && b.vy > 0) b.vy = FLAP;
+      b.y = clamp(b.y, 8, SKY_H - 8);
+      g.y = b.y / SKY_H; g.d = dist; g.at = performance.now();
+      if (score > g.sc) { g.sc = score; if (Math.random() < b.crash) botCrash(); }
+    } else if (state === 'dead') {
+      // You crashed first: the bot keeps flying, so count its score up quickly
+      b.acc += dt;
+      while (b.acc > 0.15 && !g.dead) { b.acc -= 0.15; g.sc++; if (Math.random() < b.crash) botCrash(); }
+      if (!g.dead && panelShown) vsShowResult();
+    }
+  }
   function vsRematch() {
+    if (vs && vs.bot) { vsBegin(Math.floor(Math.random() * 2147483647)); return; }
     if (!vs || !vs.conn || !vs.conn.open || (vs.them && vs.them.left)) return;
     vs.rematch.me = true;
     vsSend({ t: 'again' });
@@ -1798,18 +1875,19 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (vs.host && vs.rematch.them) vsStartMatch();
   }
   function vsShowResult() {
-    const g = vs.them, el = $('vsResult');
+    const g = vs.them, el = $('vsResult'), who = vs.bot ? 'Bot' : 'Rival';
     let text;
     if (!g) text = '';
     else if (g.left && !g.dead) text = 'Your rival left.';
-    else if (!g.dead) text = 'Rival still flying… (' + g.sc + ')';
+    else if (!g.dead) text = who + ' still flying… (' + g.sc + ')';
     else {
       text = score > g.sc ? 'YOU WIN! ' : score < g.sc ? 'YOU LOSE ' : 'DRAW ';
       text += score + ' – ' + g.sc;
       if (!vs.recorded) {
         vs.recorded = true;
-        prog.stats.vsGames++;
-        if (score > g.sc) { prog.stats.vsWins++; track('versus', 1); buzz('win'); tone(784, 1568, 0.3, 'triangle', 0.06); }
+        if (vs.bot) { if (score > g.sc) prog.stats.botWins++; }
+        else { prog.stats.vsGames++; if (score > g.sc) { prog.stats.vsWins++; track('versus', 1); } }
+        if (score > g.sc) { buzz('win'); tone(784, 1568, 0.3, 'triangle', 0.06); }
         saveProg();
       }
       if (g.left) text += ' · Rival left';
@@ -1817,7 +1895,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (vs.rematch.me && !vs.rematch.them && !(g && g.left)) text += '\nWaiting for rival to rematch…';
     else if (vs.rematch.them && !vs.rematch.me) text += '\nRival wants a rematch!';
     el.textContent = text; el.style.whiteSpace = 'pre-line';
-    againBtn.disabled = !vs.conn || !vs.conn.open || !!(g && g.left);
+    againBtn.disabled = vs.bot ? !g || !g.dead : !vs.conn || !vs.conn.open || !!(g && g.left);
   }
   function vsLeave() {
     if (!vs) return;
@@ -1836,12 +1914,13 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     }
     const g = vs.them;
     if (!g) return;
+    if (vs.bot) botTick(dt);
     g.ry += (g.y - g.ry) * Math.min(1, dt * 12);
     if (state === 'playing') {
       vs.sendAcc += dt;
       if (vs.sendAcc >= 0.1) { vs.sendAcc = 0; vsSend({ t: 's', y: +(bird.y / SKY_H).toFixed(4), d: Math.round(dist), sc: score }); }
     }
-    const txt = 'YOU ' + score + ' · <b>RIVAL ' + g.sc + (g.dead ? ' ✖' : '') + '</b>';
+    const txt = 'YOU ' + score + ' · <b>' + (vs.bot ? 'BOT ' : 'RIVAL ') + g.sc + (g.dead ? ' ✖' : '') + '</b>';
     if (vsHud.innerHTML !== txt) vsHud.innerHTML = txt;
     vsHud.hidden = !(state === 'playing' || state === 'dead');
   }
@@ -1851,7 +1930,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     // Guess where they are now from their last message (messages arrive 10 times a second)
     const lag = Math.min(0.3, (performance.now() - g.at) / 1000);
     const gd = g.d + (BASE_SPEED + Math.min(g.sc, RAMP_CAP) * SPEED_RAMP) * lag;
-    const gx = BIRD_X + (gd - dist);
+    const gx = BIRD_X + (gd - dist) - (vs.bot ? 12 : 0);   // bot flies just behind you so you can see it
     if (gx < -20 || gx > W + 20) return;
     const spr = birdSprite('mid'), k = BS * BIRD_SCALE;
     bctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1863,6 +1942,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   $('versusBtn').addEventListener('click', () => { audio(); openX('versus'); });
   $('vsHost').addEventListener('click', () => vsOpen(true));
   $('vsFind').addEventListener('click', () => vsFind());
+  $('botEasy').addEventListener('click', () => { audio(); vsBot('easy'); });
+  $('botNormal').addEventListener('click', () => { audio(); vsBot('normal'); });
+  $('botHard').addEventListener('click', () => { audio(); vsBot('hard'); });
 
   // ---------- Matchmaking ----------
   // There is no game server, so the lobby is a few shared names on the PeerJS server
@@ -1969,7 +2051,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   $('vsCode').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); vsJoin(); } });
   $('vsClose').addEventListener('click', () => closeX());
 
-  const modeBtns = { classic: $('modeClassic'), chaos: $('modeChaos') };
+  const modeBtns = { easy: $('modeEasy'), classic: $('modeClassic'), chaos: $('modeChaos') };
   function syncModes() { Object.keys(modeBtns).forEach(k => modeBtns[k].setAttribute('aria-checked', String(k === gameMode))); }
   Object.keys(modeBtns).forEach(k => modeBtns[k].addEventListener('click', () => {
     if (state !== 'ready') return;
@@ -2118,9 +2200,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       for (const k in effects) { effects[k] -= dt; if (effects[k] <= 0) delete effects[k]; }
       if (invuln > 0) invuln = Math.max(0, invuln - dt);
       syncFx();
-      const speed = (BASE_SPEED + Math.min(score, RAMP_CAP) * SPEED_RAMP) * (effects.slow ? 0.65 : effects.fast ? 1.35 : 1);
+      const speed = (BASE_SPEED + Math.min(score, RAMP_CAP) * SPEED_RAMP) * (effects.slow ? 0.65 : effects.fast ? 1.35 : 1) * (isEasy() ? 0.82 : 1);
       scroll += speed * dt; curSpeed = speed; dist += speed * dt;
-      bird.vy = Math.min(MAX_FALL, bird.vy + GRAV * (effects.heavy ? 1.35 : 1) * dt);
+      bird.vy = Math.min(MAX_FALL, bird.vy + GRAV * (effects.heavy ? 1.35 : 1) * (isEasy() ? 0.85 : 1) * dt);
       bird.y += bird.vy * dt;
       bird.rot += (clamp(bird.vy / 240, -0.4, 1.4) - bird.rot) * Math.min(1, dt * 14);
       if (bird.y < 6) { bird.y = 6; if (bird.vy < 0) bird.vy = 0; }
@@ -2133,9 +2215,10 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       for (const it of items) it.x -= speed * dt;
       items = items.filter(it => it.x > -12 && !it.taken);
       const mult = effects.double ? 2 : 1, pr = hitR();
-      if (effects.magnet) for (const b of bonus) {
+      const mr = effects.magnet ? 75 : MAGNET_RANGE[wallet.magnet];
+      if (mr) for (const b of bonus) {
         const dx = BIRD_X - b.x, dy = bird.y - b.y;
-        if (!b.taken && dx * dx + dy * dy < 75 * 75) { b.x += dx * Math.min(1, dt * 6); b.y += dy * Math.min(1, dt * 6); }
+        if (!b.taken && dx * dx + dy * dy < mr * mr) { b.x += dx * Math.min(1, dt * 6); b.y += dy * Math.min(1, dt * 6); }
       }
       for (const it of items) {
         const dx = it.x - BIRD_X, dy = it.y - bird.y;
@@ -2156,9 +2239,10 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
         if (!c.scored && c.x + COLW / 2 < BIRD_X) {
           c.scored = true; score++; addCoins(mult);
           scoreEl.textContent = score;
-          prog.stats.pipes++; track('pipes', 1); track('run', score, true);
+          prog.stats.pipes++; track('pipes', 1);
+          if (!isEasy()) track('run', score, true);
           if (gameMode === 'chaos' && !vs) track('chaosRun', score, true);
-          const md = MEDALS.findIndex(d => d.at === score);
+          const md = isEasy() ? -1 : MEDALS.findIndex(d => d.at === score);
           if (md >= 0) { toast(MEDALS[md].name.toUpperCase() + ' MEDAL!'); buzz('win'); }
           if (!reduce) { scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump'); }
           tone(988, 988, 0.06, 'square', 0.04);
