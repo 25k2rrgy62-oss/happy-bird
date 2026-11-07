@@ -3,6 +3,13 @@
 All notable changes to Happy Bird. The newest version is at the top.
 Downloads for every version are on the [Releases page](https://github.com/25k2rrgy62-oss/happy-bird/releases).
 
+## 1.12.0 (2026-11-07)
+
+### Changed
+- **The Shop has tabs:** Deals, Maps, Colors, Birds, Hats and Trails. You see one section at a time instead of one long list, and the tab bar stays at the top while you scroll.
+- The Shop opens on the tab you used last.
+- The Deals tab gets a red dot while a limited-time holiday event is on.
+
 ## 1.11.0 (2026-11-07)
 
 ### Added
