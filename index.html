@@ -12,7 +12,7 @@ img { max-width: 100%; }
 </head>
 <body>
 <title>Happy Bird</title>
-<meta name="app-version" content="1.7.0">
+<meta name="app-version" content="1.8.0">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -391,6 +391,24 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 }
 .vs-hud b { color: #ffa0e0; font-weight: 400; }
 
+/* Online count and the "finding a match" bar */
+.online-tag { margin: 6px auto 0; font: 400 max(8px, calc(var(--u) * 9px))/1 var(--display); }
+.ready .online-tag, .ready .version { text-shadow: 1px 0 0 var(--ink), -1px 0 0 var(--ink), 0 1px 0 var(--ink), 0 -1px 0 var(--ink), 1px 1px 0 var(--ink), -1px 1px 0 var(--ink), 1px -1px 0 var(--ink), -1px -1px 0 var(--ink), 0 2px 0 var(--ink); }
+.online-tag i, .vs-online i { display: inline-block; width: 7px; height: 7px; margin-right: 5px; border: 1px solid var(--ink); border-radius: 50%; background: #5ee05a; vertical-align: 0; }
+.vs-online { margin: 8px 0 0; font-size: 14px; font-weight: 600; }
+.mm-bar {
+  position: absolute;
+  left: calc(var(--u) * 14px);
+  right: calc(var(--u) * 14px);
+  bottom: max(10px, calc(3% + 4px));
+  z-index: 4;
+  padding: 10px 12px 12px;
+  text-align: center;
+  cursor: default;
+}
+.mm-bar p { margin: 0; font: 400 max(10px, calc(var(--u) * 12px))/1.4 var(--display); }
+.mm-bar .btn { margin-top: 10px; }
+
 /* Installed app: edge to edge, HUD below the notch */
 .app body { padding: 0; }
 .app .frame { border: 0; box-shadow: none; }
@@ -400,6 +418,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 .app .wallet { top: calc(env(safe-area-inset-top, 0px) + 46px); }
 .app .ready { top: calc(env(safe-area-inset-top, 0px) + var(--u) * 80px); }
 .app .fxbar, .app .vs-hud { top: calc(env(safe-area-inset-top, 0px) + var(--u) * 74px); }
+.app .mm-bar { bottom: max(calc(env(safe-area-inset-bottom, 0px) + 8px), calc(3% + 4px)); }
 .app .menu { bottom: max(calc(env(safe-area-inset-bottom, 0px) + 4px), calc(6% - 17px)); }
 .app .panel {
   bottom: calc(env(safe-area-inset-bottom, 0px) + var(--u) * 14px);
@@ -423,6 +442,10 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     <p id="resumeHint" class="card hint" hidden>Tap to keep flying</p>
     <div id="fxbar" class="fxbar"></div>
     <div id="vsHud" class="vs-hud outlined" hidden></div>
+    <div id="mmBar" class="mm-bar card" role="status" hidden>
+      <p id="mmText">Finding a match…</p>
+      <button id="mmCancel" class="btn ghost" type="button">CANCEL</button>
+    </div>
     <p id="toast" class="toast outlined" role="status" hidden></p>
 
     <section id="ready" class="ready">
@@ -430,6 +453,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       <p id="readyText" class="card">Tap, click or press Space to flap. Each pipe earns a coin. Floating coins are a bonus.</p>
       <p id="bestReadyWrap" class="best-line outlined" hidden>BEST <span id="bestReady">0</span></p>
       <p id="versionTag" class="version outlined"></p>
+      <p id="onlineTag" class="online-tag outlined" hidden></p>
     </section>
 
     <div id="menu" class="menu">
@@ -526,6 +550,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     <section id="versus" class="panel card" role="dialog" aria-label="Versus" hidden>
       <h2>VERSUS</h2>
       <p class="shop-note">Race someone online. You both get the same pipes and see each other as a ghost bird. Highest score wins.</p>
+      <p id="vsOnline" class="vs-online" hidden></p>
       <div class="group"><h3>Quick match</h3><button id="vsFind" class="btn alt" type="button">FIND MATCH</button></div>
       <div class="group">
         <h3>Play a bot</h3>
@@ -577,7 +602,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   const SET_KEY = 'happy-bird-settings';
 
   const $ = id => document.getElementById(id);
-  const stage = $('stage'), frame = $('frame'), canvas = $('scene'), ctx = canvas.getContext('2d');
+  const stage = $('stage'), frame = $('frame'), canvas = $('scene');
+  let ctx = canvas.getContext('2d');   // "let" so pre-drawn pictures can borrow the drawing helpers
   const scoreEl = $('score'), readyEl = $('ready'), overEl = $('over');
   const muteBtn = $('mute'), againBtn = $('again'), settingsBtn = $('settingsBtn');
   const settingsEl = $('settings'), settingsDone = $('settingsDone');
@@ -622,7 +648,16 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
   let P = null;
   const DAY = KEYS[1].c;
+  // The sky colors change slowly, so recompute them only when the time of day has moved
+  // a visible step (or the theme changed). palVer tells the picture caches to redraw.
+  let palKey = '', palVer = 0;
   function computePalette() {
+    const key = Math.round(tod * 720) + '|' + themeKey;
+    if (key === palKey && P) return;
+    palKey = key; palVer++;
+    computePaletteNow();
+  }
+  function computePaletteNow() {
     let i = 0;
     for (let j = 0; j < KEYS.length; j++) if (tod >= KEYS[j].t) i = j;
     const a = KEYS[i], b = KEYS[(i + 1) % KEYS.length];
@@ -947,6 +982,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   let shake = 0, flash = 0, deadAt = 0, panelShown = false, settingsOpen = false, shopOpen = false;
   let items = [], effects = {}, invuln = 0, runCounted = false, runMedal = -1, xOpen = null;
   const anyOpen = () => settingsOpen || shopOpen || !!xOpen;
+  // While searching for a match you can play a practice run (nothing counts)
+  const practicing = () => !!(vs && vs.mm && !vs.them);
   let vs = null, dist = 0;   // vs holds the online match while one is running; dist = how far this run has flown
 
   try { best = parseInt(localStorage.getItem(STORE_KEY), 10) || 0; } catch (e) { best = 0; }
@@ -1049,6 +1086,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   const missionDone = m => m.progress >= m.target;
   function track(type, n, isBest) {
+    if (practicing()) return;
     for (const m of prog.missions) {
       if (m.type !== type || missionDone(m) || prog.missionDay !== todayKey()) continue;
       m.progress = Math.min(m.target, isBest ? Math.max(m.progress, n) : m.progress + n);
@@ -1284,7 +1322,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     settingsBtn.hidden = busy; shopBtn.hidden = busy;
   }
   function updateWallet() { walletN.textContent = wallet.coins; shopCoins.textContent = wallet.coins; }
-  function addCoins(n) { wallet.coins += n; runCoins += n; prog.stats.earned += n; saveWallet(); updateWallet(); }
+  function addCoins(n) { if (practicing()) return; wallet.coins += n; runCoins += n; prog.stats.earned += n; saveWallet(); updateWallet(); }
   const reviveCost = () => 10 * Math.pow(2, revives);
   function doRevive() {
     const cost = reviveCost();
@@ -1313,6 +1351,10 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     scoreEl.textContent = '0'; scoreEl.hidden = true;
     overEl.hidden = true; readyEl.hidden = anyOpen();
     bestReadyWrap.hidden = modeBest() <= 0; bestReady.textContent = modeBest();
+    if (practicing()) {
+      readyEl.hidden = true;
+      resumeHint.textContent = 'Tap to fly while you wait'; resumeHint.hidden = false;
+    }
     $('readyText').textContent = gameMode === 'chaos'
       ? 'Chaos mode! Every glowing orb is a surprise: it could help you or hurt you. ? boxes might hold coins.'
       : gameMode === 'easy'
@@ -1320,18 +1362,33 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       : 'Tap, click or press Space to flap. Each pipe earns a coin. Floating coins are a bonus.';
     syncUI();
   }
-  function start() { state = 'playing'; readyEl.hidden = true; scoreEl.hidden = false; syncUI(); }
-  function flap() { bird.vy = FLAP; bird.wing = 1; tone(520, 900, 0.08, 'square', 0.05); buzz('flap'); }
+  function start() { resumeHint.hidden = true; state = 'playing'; readyEl.hidden = true; scoreEl.hidden = false; syncUI(); }
+  function flap() {
+    bird.vy = FLAP; bird.wing = 1; tone(520, 900, 0.08, 'square', 0.05); buzz('flap');
+    // a little puff of air under the wing
+    if (!reduce && parts.length < 120) for (let i = 0; i < 3; i++) {
+      parts.push({ x: BIRD_X - 6 + rand(-1, 1), y: bird.y + 3 + rand(-1, 2), vx: rand(-34, -14), vy: rand(4, 18), s: i ? 1 : 2, c: '#ffffff', life: 0.32, max: 0.32, ph: 0, kind: 'puff' });
+    }
+  }
   function die() {
     state = 'dead'; deadAt = performance.now(); curSpeed = 0;
     bird.vy = -80;
+    // feathers fly off in the bird's color
+    if (!reduce) {
+      const sk = skinMode !== 'none' && SKINS[skinMode];
+      const fc = (sk && sk.pal && sk.pal.body) || (BIRDS[birdIdx] || BIRDS[0]).body;
+      for (let i = 0; i < 9; i++) {
+        const a = rand(0, Math.PI * 2), sp = rand(25, 60);
+        parts.push({ x: BIRD_X, y: bird.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 25, g: 90, s: 2, h: 1, c: i % 3 ? fc : '#ffffff', life: 0.9, max: 0.9, ph: rand(0, 6), kind: 'feather' });
+      }
+    }
     flash = 1; shake = reduce ? 0 : 0.3;
-    if (vs) vsSend({ t: 'dead', sc: score, d: dist });
+    if (vs && vs.them) vsSend({ t: 'dead', sc: score, d: dist });
     if (!vs && score > modeBest()) {
       if (gameMode === 'chaos') prog.bestChaos = score; else if (gameMode === 'easy') prog.bestEasy = score; else { best = score; saveBest(); }
       isNew = true;
     }
-    const m = isEasy() ? -1 : medalFor(score);
+    const m = isEasy() || practicing() ? -1 : medalFor(score);
     if (m > runMedal) { if (runMedal < 0) track('medals', 1); else prog.medals[runMedal]--; prog.medals[m]++; runMedal = m; }
     saveProg();
     buzz('crash');
@@ -1364,7 +1421,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   function press() {
     audio();
     if (musicOn && !musicTimer) startMusic();
-    if (vs && (state === 'ready' || state === 'dead')) return;   // Versus starts on a countdown
+    if (vs && !practicing() && (state === 'ready' || state === 'dead')) return;   // Versus starts on a countdown
     if (state === 'ready') { start(); flap(); }
     else if (state === 'playing') flap();
     else if (state === 'revive') { state = 'playing'; resumeHint.hidden = true; scoreEl.hidden = false; syncUI(); flap(); }
@@ -1636,7 +1693,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   function closeX(quiet) {
     if (!xOpen) return;
-    if (xOpen === 'versus' && vs && !vs.conn && !vs.bot) vsLeave();   // closing the panel cancels a room nobody joined
+    if (xOpen === 'versus' && vs && !vs.conn && !vs.bot && !vs.mm) vsLeave();   // closing the panel cancels a room nobody joined
     xPanels[xOpen].hidden = true; xOpen = null;
     if (state === 'ready') readyEl.hidden = false;
     if (!quiet) { try { frame.focus({ preventScroll: true }); } catch (e) {} }
@@ -1941,7 +1998,101 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   $('versusBtn').addEventListener('click', () => { audio(); openX('versus'); });
   $('vsHost').addEventListener('click', () => vsOpen(true));
-  $('vsFind').addEventListener('click', () => vsFind());
+  $('vsFind').addEventListener('click', () => { audio(); vsFind(); });
+  const mmBar = $('mmBar'), mmText = $('mmText');
+  $('mmCancel').addEventListener('click', () => { audio(); vsLeave(); reset(); try { frame.focus({ preventScroll: true }); } catch (e) {} });
+  function syncSearchBar() {   // the bar with only a Cancel button, shown while searching
+    const on = practicing();
+    if (mmBar.hidden === on) mmBar.hidden = !on;
+    if (muteBtn.hidden !== on) muteBtn.hidden = on;
+    if (!on) return;
+    const sec = Math.floor((performance.now() - vs.t0) / 1000);
+    const txt = 'Finding a match… ' + Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') + (onlineCount > 1 ? ' · ' + onlineCount + ' online' : '');
+    if (mmText.textContent !== txt) mmText.textContent = txt;
+  }
+
+  // ---------- Players online ----------
+  // No server keeps a list of players, so the first player online becomes the "hub":
+  // it holds the name HUB_ID on the PeerJS server, everyone else connects to it and
+  // says hello every few seconds, and the hub tells everyone how many are connected.
+  // If the hub leaves, the others notice and one of them takes over.
+  const HUB_ID = 'happybird-hub-v1';
+  let pres = null, onlineCount = 0, presRetry = null;
+  function setOnline(n) {
+    onlineCount = n;
+    const tag = $('onlineTag'), vo = $('vsOnline');
+    const html = '<i></i>' + n + (n === 1 ? ' player online (you)' : ' players online');
+    tag.hidden = vo.hidden = !n;
+    if (n && tag.innerHTML !== html) { tag.innerHTML = html; vo.innerHTML = html; }
+  }
+  function presStart() {
+    if (pres || document.hidden || navigator.onLine === false) return;
+    loadPeer().then(presConnect, () => {});
+  }
+  function presStop() {
+    clearTimeout(presRetry);
+    if (!pres) return;
+    const p = pres;
+    pres = null;
+    clearInterval(p.timer);
+    try { p.peer.destroy(); } catch (e) {}
+  }
+  function presRestart(delay) {
+    presStop();
+    presRetry = setTimeout(presStart, delay || 1000);
+  }
+  function presConnect() {
+    if (pres || document.hidden) return;
+    const me = pres = { peer: new window.Peer(), hub: false, conn: null, clients: new Map(), last: performance.now(), born: performance.now(), timer: null };
+    me.peer.on('open', () => {
+      if (pres !== me) return;
+      const c = me.peer.connect(HUB_ID, { reliable: true });
+      c.on('open', () => { if (pres !== me) return; me.conn = c; me.last = performance.now(); try { c.send({ t: 'p', s: practicing() }); } catch (e) {} });
+      c.on('data', d => { if (pres === me && d && d.t === 'n') { me.last = performance.now(); setOnline(d.n | 0); } });
+      c.on('close', () => { if (pres === me && !me.hub) presRestart(800); });
+    });
+    me.peer.on('error', e => {
+      if (pres !== me || me.hub) return;
+      if (e && e.type === 'peer-unavailable' && !me.conn) presBecomeHub(me);   // nobody is the hub yet
+      else if (!me.conn) presRestart(5000);
+    });
+    me.timer = setInterval(() => {
+      if (pres !== me) return;
+      if (me.hub) { hubTick(me); return; }
+      if (me.conn && me.conn.open) { try { me.conn.send({ t: 'p', s: practicing() }); } catch (e) {} }
+      else if (performance.now() - me.born > 7000) { presRestart(300 + Math.random() * 1000); return; }   // could not reach the hub
+      if (performance.now() - me.last > 12000) presRestart(500 + Math.random() * 1500);   // hub went quiet (it speaks every 4s)
+    }, 4000);
+  }
+  function presBecomeHub(me) {
+    try { me.peer.destroy(); } catch (e) {}
+    me.hub = true;
+    const hp = me.peer = new window.Peer(HUB_ID);
+    hp.on('open', () => { if (pres === me) hubTick(me); });
+    hp.on('disconnected', () => { if (pres === me) { try { hp.reconnect(); } catch (e) {} } });
+    hp.on('connection', c => {
+      if (pres !== me) { try { c.close(); } catch (e) {} return; }
+      me.clients.set(c, performance.now());
+      c.on('data', d => { if (d && d.t === 'p') me.clients.set(c, performance.now()); });
+      c.on('open', () => hubTick(me));
+      c.on('close', () => { me.clients.delete(c); hubTick(me); });
+    });
+    hp.on('error', e => {
+      if (pres !== me) return;
+      // someone else became the hub a moment earlier: connect to them instead
+      if (e && e.type === 'unavailable-id') presRestart(300 + Math.random() * 1200);
+    });
+  }
+  function hubTick(me) {
+    const now = performance.now();
+    for (const [c, at] of me.clients) if (now - at > 15000 || (!c.open && now - at > 8000)) { try { c.close(); } catch (e) {} me.clients.delete(c); }
+    let n = 1;
+    for (const c of me.clients.keys()) if (c.open) n++;
+    for (const c of me.clients.keys()) if (c.open) { try { c.send({ t: 'n', n }); } catch (e) {} }
+    setOnline(n);
+  }
+  window.addEventListener('online', () => presRestart(500));
+  window.addEventListener('offline', () => { presStop(); setOnline(0); });
   $('botEasy').addEventListener('click', () => { audio(); vsBot('easy'); });
   $('botNormal').addEventListener('click', () => { audio(); vsBot('normal'); });
   $('botHard').addEventListener('click', () => { audio(); vsBot('hard'); });
@@ -2003,12 +2154,18 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       });
     });
   }
+  function mmFail(me, msg) {
+    if (vs !== me) return;
+    vsLeave(); reset();
+    toast(msg, 'bad');
+  }
   async function vsFind() {
     if (vs) vsLeave();
     if (navigator.onLine === false) { vsStatus('You are offline. Connect to the internet first.'); return; }
-    vsStatus('Searching for a player…');
-    try { await loadPeer(); } catch (e) { vsStatus('Could not load the online module. Check your internet.'); return; }
-    const me = vs = { host: false, mm: true, code: null, peer: null, conn: null, them: null, rematch: { me: false, them: false } };
+    const me = vs = { host: false, mm: true, t0: performance.now(), code: null, peer: null, conn: null, them: null, rematch: { me: false, them: false } };
+    closeX(true);
+    reset();   // starts the practice run you can play while waiting
+    try { await loadPeer(); } catch (e) { mmFail(me, 'NO CONNECTION'); return; }
     let taken = 0;
     for (let attempt = 0; attempt < MM_SLOTS * 3; attempt++) {
       if (vs !== me) return;
@@ -2034,13 +2191,13 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
           }
           return;
         }
-        if (h === 'error') { vsStatus('Connection problem. Try again.'); vsLeave(); return; }
+        if (h === 'error') { mmFail(me, 'CONNECTION PROBLEM'); return; }
         // 'taken': someone started waiting there a moment ago, so loop and join them
         if (++taken <= 3) attempt--;
       }
       await wait(250);
     }
-    if (vs === me && !me.conn) { vsStatus('The lobby is full right now. Try again in a moment.'); vsLeave(); }
+    if (vs === me && !me.conn) mmFail(me, 'LOBBY FULL, TRY AGAIN');
   }
   const vsJoin = () => {
     const code = $('vsCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -2123,6 +2280,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       if (p.life !== undefined) p.life -= dt;
       const bat = p.kind === 'bat';
       p.x += (p.vx - drift + (bat ? 0 : Math.sin(p.ph) * 6)) * dt;
+      if (p.g) p.vy += p.g * dt;
       p.y += (p.vy + (bat ? Math.sin(p.ph * 2) * 10 : 0)) * dt;
     }
     parts = parts.filter(p => (p.life === undefined || p.life > 0) && p.x > -10 && p.x < W + 40 && p.y < SKY_H + 2 && p.y > -10);
@@ -2142,6 +2300,10 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
         ctx.fillRect(x + 1, y, 2, 1); ctx.fillRect(x, y + 1, 1, 2); ctx.fillRect(x + 3, y + 1, 1, 2); ctx.fillRect(x + 1, y + 3, 2, 1);
       } else if (p.kind === 'spark') {
         if (Math.sin(p.ph * 2) > -0.3) ctx.fillRect(x, y, 1, 1);
+      } else if (p.kind === 'puff' || p.kind === 'feather') {
+        ctx.globalAlpha = Math.max(0, p.life / p.max) * (p.kind === 'puff' ? 0.75 : 1);
+        ctx.fillRect(x, y, p.s, p.h || p.s);
+        ctx.globalAlpha = 1;
       } else {
         ctx.fillRect(x, y, p.s, p.h || p.s);
       }
@@ -2172,7 +2334,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (flash > 0) flash = Math.max(0, flash - dt * 3);
     bird.wing = Math.max(0, bird.wing - dt / 0.24);
     if (vs) vsTick(dt);
-    const menuHide = state !== 'ready' || anyOpen() || !!(vs && vs.them);
+    const menuHide = state !== 'ready' || anyOpen() || !!(vs && vs.them) || practicing();
+    syncSearchBar();
     if (menuEl.hidden !== menuHide) menuEl.hidden = menuHide;
     const fxHide = state !== 'playing' && state !== 'revive';
     if (fxbar.hidden !== fxHide) fxbar.hidden = fxHide;
@@ -2195,8 +2358,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     }
 
     if (state === 'playing') {
-      if (!runCounted) { runCounted = true; prog.stats.games++; track('games', 1); }
-      prog.stats.time += dt;
+      const real = !practicing();
+      if (!runCounted && real) { runCounted = true; prog.stats.games++; track('games', 1); }
+      if (real) prog.stats.time += dt;
       for (const k in effects) { effects[k] -= dt; if (effects[k] <= 0) delete effects[k]; }
       if (invuln > 0) invuln = Math.max(0, invuln - dt);
       syncFx();
@@ -2228,8 +2392,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
         const dx = b.x - BIRD_X, dy = b.y - bird.y;
         if (!b.taken && dx * dx + dy * dy < (pr + 10) * (pr + 10)) {
           b.taken = true; addCoins((b.special ? SPECIAL_VALUE : BONUS_VALUE) * mult); coinBurst(b.x, b.y, b.special);
-          prog.stats.pickups++; track('pickups', 1);
-          if (b.special) { prog.stats.specials++; track('specials', 1); }
+          if (real) prog.stats.pickups++;
+          track('pickups', 1);
+          if (b.special && real) { prog.stats.specials++; track('specials', 1); }
           if (b.special) tone(1047, 2093, 0.25, 'triangle', 0.06, 0.1);
           tone(1568, 1568, 0.05, 'square', 0.04); tone(2093, 2093, 0.1, 'square', 0.04, 0.05);
         }
@@ -2239,10 +2404,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
         if (!c.scored && c.x + COLW / 2 < BIRD_X) {
           c.scored = true; score++; addCoins(mult);
           scoreEl.textContent = score;
-          prog.stats.pipes++; track('pipes', 1);
+          if (real) prog.stats.pipes++;
+          track('pipes', 1);
           if (!isEasy()) track('run', score, true);
           if (gameMode === 'chaos' && !vs) track('chaosRun', score, true);
-          const md = isEasy() ? -1 : MEDALS.findIndex(d => d.at === score);
+          const md = isEasy() || !real ? -1 : MEDALS.findIndex(d => d.at === score);
           if (md >= 0) { toast(MEDALS[md].name.toUpperCase() + ' MEDAL!'); buzz('win'); }
           if (!reduce) { scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump'); }
           tone(988, 988, 0.06, 'square', 0.04);
@@ -2269,7 +2435,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     bird.y += bird.vy * dt;
     bird.rot += (1.5 - bird.rot) * Math.min(1, dt * 10);
     if (bird.y + HIT_R >= SKY_H) { bird.y = SKY_H - HIT_R; bird.vy = 0; }
-    if (!panelShown && performance.now() - deadAt > 650) showPanel();
+    if (practicing()) { if (performance.now() - deadAt > 900) reset(); }   // practice: straight back to the start
+    else if (!panelShown && performance.now() - deadAt > 650) showPanel();
   }
 
   // Drawing helpers (always whole pixels)
@@ -2291,8 +2458,25 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     return S([0, 1, 2].map(k => Math.round(a[k] + (b[k] - a[k]) * u)));
   }
 
+  // Picture cache: draw something once into an offscreen canvas, then copy it each frame
+  // with a single drawImage. It is redrawn only when the colors (palVer) or size change.
+  const picCache = {};
+  function cachedPic(name, w, h, paint) {
+    let c = picCache[name];
+    if (c && c.ver === palVer && c.cv.width === w && c.cv.height === h) return c.cv;
+    if (!c) c = picCache[name] = { cv: document.createElement('canvas'), ver: -1 };
+    c.cv.width = w; c.cv.height = h;
+    const saved = ctx;
+    ctx = c.cv.getContext('2d');
+    try { paint(); } finally { ctx = saved; }
+    c.ver = palVer;
+    return c.cv;
+  }
+
   function drawSky() {
-    for (let y = 0; y < SKY_H; y += 6) rect(0, y, W, 6, skyAt(y / SKY_H));
+    ctx.drawImage(cachedPic('sky', W, SKY_H, () => {
+      for (let y = 0; y < SKY_H; y += 6) rect(0, y, W, 6, skyAt(y / SKY_H));
+    }), 0, 0);
     if (P.star > 0.01) {
       ctx.fillStyle = S(PAPER);
       for (const s of stars) {
@@ -2307,9 +2491,12 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     const us = tod / 0.58;
     if (us <= 1) {
       const sx = 16 + 112 * us, sy = HORIZON - Math.sin(us * Math.PI) * ARC;
-      ctx.globalAlpha = 0.25; disc(sx, sy, 17, S(P.sun));
-      ctx.globalAlpha = 0.4; disc(sx, sy, 14, S(P.sun));
-      ctx.globalAlpha = 1; disc(sx, sy, 11, S(P.sun));
+      const sun = cachedPic('sun', 37, 37, () => {
+        ctx.globalAlpha = 0.25; disc(18, 18, 17, S(P.sun));
+        ctx.globalAlpha = 0.4; disc(18, 18, 14, S(P.sun));
+        ctx.globalAlpha = 1; disc(18, 18, 11, S(P.sun));
+      });
+      ctx.drawImage(sun, Math.round(sx) - 18, Math.round(sy) - 18);
     }
     const v = mod(tod - 0.56, 1);
     if (v <= 0.5) {
@@ -2323,28 +2510,37 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
   function drawClouds() {
     if (P.cloudA < 0.02) return;
-    ctx.globalAlpha = P.cloudA;
     const span = W + 70;
     for (const c of clouds) {
       const x = Math.round(mod(c.x - scroll * 0.08, span) - 35), y = c.y, s = c.s;
       const r1 = Math.round(7 * s), r2 = Math.round(5 * s), off = Math.round(8 * s);
-      for (const pass of [[1, P.cloud[1]], [0, P.cloud[0]]]) {
-        disc(x, y + pass[0], r1, pass[1]);
-        disc(x - off, y + 2 + pass[0], r2, pass[1]);
-        disc(x + off, y + 2 + pass[0], r2, pass[1]);
-      }
-      rect(x - off - r2, y + 2 + r2 - 1, off * 2 + r2 * 2 + 1, 2, P.cloud[1]);
+      const ox = off + r2 + 3, oy = r1 + 2;
+      const pic = cachedPic('cloud' + s, ox * 2 + 1, oy + r2 + 6, () => {
+        ctx.globalAlpha = P.cloudA;   // overlapping puffs blend the same way they always did
+        for (const pass of [[1, P.cloud[1]], [0, P.cloud[0]]]) {
+          disc(ox, oy + pass[0], r1, pass[1]);
+          disc(ox - off, oy + 2 + pass[0], r2, pass[1]);
+          disc(ox + off, oy + 2 + pass[0], r2, pass[1]);
+        }
+        rect(ox - off - r2, oy + 2 + r2 - 1, off * 2 + r2 * 2 + 1, 2, P.cloud[1]);
+      });
+      ctx.drawImage(pic, x - ox, y - oy);
     }
-    ctx.globalAlpha = 1;
   }
 
   function layer(color, fn, par) {
+    // One stair-step outline filled in a single call (the same pixels as 144 one-pixel bars)
     ctx.fillStyle = color;
     const s = Math.floor(scroll * par);
+    ctx.beginPath();
+    ctx.moveTo(0, SKY_H);
     for (let x = 0; x < W; x++) {
       const y = Math.round(fn(x + s));
-      ctx.fillRect(x, y, 1, SKY_H - y);
+      ctx.lineTo(x, y); ctx.lineTo(x + 1, y);
     }
+    ctx.lineTo(W, SKY_H);
+    ctx.closePath();
+    ctx.fill();
   }
   function drawHills() {
     layer(P.hill[0], u => SKY_H - 44 - Math.abs(Math.sin(u * 0.085)) * 11 - Math.abs(Math.sin(u * 0.2 + 1)) * 3, 0.1);
@@ -2461,6 +2657,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   function drawColumn(c) {
     const x = Math.round(c.x), top = c.gy - c.gap / 2, bot = c.gy + c.gap / 2;
     const tEnd = top - CAP_H, bStart = bot + CAP_H;
+    // soft shadow to the right of the pipe
+    ctx.globalAlpha = 0.13;
+    rect(x + COLW + CAP_X, 0, 2, Math.max(0, top), '#000');
+    rect(x + COLW + CAP_X, bot, 2, SKY_H - bot, '#000');
+    ctx.globalAlpha = 1;
     if (tEnd > 0) shade(x, 0, COLW, tEnd);
     shade(x, bStart, COLW, SKY_H - bStart);
     if (THEME.deco === 'candy') {
@@ -2513,12 +2714,14 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   function drawGround() {
     const gy = SKY_H, sc = Math.floor(scroll);
     rect(0, gy, W, 1, INK);
-    for (let yy = 0; yy < 6; yy++) {
-      for (let x = 0; x < W; x++) {
-        ctx.fillStyle = mod(x + sc + yy, 10) < 5 ? P.ground[0] : P.ground[1];
-        ctx.fillRect(x, gy + 1 + yy, 1, 1);
+    // The striped edge repeats every 10 pixels: draw it once, then slide it
+    const stripe = cachedPic('stripe', W + 10, 6, () => {
+      for (let yy = 0; yy < 6; yy++) for (let x = 0; x < W + 10; x++) {
+        ctx.fillStyle = mod(x + yy, 10) < 5 ? P.ground[0] : P.ground[1];
+        ctx.fillRect(x, yy, 1, 1);
       }
-    }
+    });
+    ctx.drawImage(stripe, -mod(sc, 10), gy + 1);
     rect(0, gy + 7, W, 1, P.ground[1]);
     rect(0, gy + 8, W, GROUND - 8, P.ground[2]);
     ctx.fillStyle = P.ground[3];
@@ -2569,6 +2772,12 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     for (const b of bonus) if (!b.taken) drawCoin(b);
     for (const it of items) if (!it.taken) drawItem(it);
     drawGround();
+    // the bird's shadow on the ground: smaller and fainter the higher it flies
+    const hgt = clamp((SKY_H - bird.y) / SKY_H, 0, 1), sw = Math.round(11 - hgt * 6);
+    ctx.globalAlpha = 0.22 * (1 - hgt * 0.6);
+    rect(BIRD_X - Math.floor(sw / 2), SKY_H + 1, sw, 1, '#000');
+    rect(BIRD_X - Math.floor(sw / 2) + 1, SKY_H + 2, sw - 2, 1, '#000');
+    ctx.globalAlpha = 1;
     drawParts();
     if (effects.fog && state === 'playing') {
       const g = ctx.createRadialGradient(BIRD_X, bird.y, 16, BIRD_X, bird.y, 48);
@@ -2631,8 +2840,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   document.addEventListener('visibilitychange', () => {
     last = 0;
-    if (document.hidden) saveProg();
-    else { syncDots(); if (state === 'ready' && !anyOpen() && dailyState().ready) openX('daily'); }
+    if (document.hidden) { saveProg(); presStop(); }
+    else { presRestart(300); syncDots(); if (state === 'ready' && !anyOpen() && dailyState().ready) openX('daily'); }
     if (document.hidden) stopMusic(); else if (musicOn && actx) startMusic();
     if (!document.hidden) syncTime();
   });
@@ -2652,6 +2861,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   resize();
   syncDots();
   if (dailyState().ready) openX('daily');
+  setTimeout(presStart, 1200);
   draw();
   requestAnimationFrame(loop);
 })();
