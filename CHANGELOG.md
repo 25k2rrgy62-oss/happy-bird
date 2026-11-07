@@ -3,6 +3,13 @@
 All notable changes to Happy Bird. The newest version is at the top.
 Downloads for every version are on the [Releases page](https://github.com/25k2rrgy62-oss/happy-bird/releases).
 
+## 1.10.0 (2026-11-07)
+
+### Changed
+- **Faster gameplay:** pipes move about 16% faster at the start and speed up a bit more as your score grows.
+- **Bigger gaps to balance it:** the opening between pipes starts at 90 instead of 80 and never gets smaller than 62 (was 54). Easy mode gaps grew by the same amount.
+- Versus only matches players on this version or newer, so both players always get the same pipes.
+
 ## 1.9.0 (2026-11-07)
 
 ### Changed

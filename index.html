@@ -12,7 +12,7 @@ img { max-width: 100%; }
 </head>
 <body>
 <title>Happy Bird</title>
-<meta name="app-version" content="1.9.0">
+<meta name="app-version" content="1.10.0">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -592,11 +592,11 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   const W = 144, GROUND = 38, H_MIN = 256, H_MAX = 340;
   let H = 256, SKY_H = H - GROUND;
   const GRAV = 780, FLAP = -200, MAX_FALL = 310;
-  const GAP_START = 80, GAP_MIN = 54, GAP_STEP = 1, COLW = 22, CAP_H = 6, CAP_X = 1, SPACING = 124, NODE = 14, BONUS_VALUE = 2, SPECIAL_VALUE = 5, SPECIAL_CHANCE = 0.18;
+  const GAP_START = 90, GAP_MIN = 62, GAP_STEP = 1, COLW = 22, CAP_H = 6, CAP_X = 1, SPACING = 124, NODE = 14, BONUS_VALUE = 2, SPECIAL_VALUE = 5, SPECIAL_CHANCE = 0.18;
   const BIRD_X = 40, BIRD_Y_MENU = 52;
   let BIRD_Y = 112;
   const HIT_R = 4.5, BIRD_SCALE = 0.85;
-  const BASE_SPEED = 86, SPEED_RAMP = 0.7, RAMP_CAP = 60;
+  const BASE_SPEED = 100, SPEED_RAMP = 0.8, RAMP_CAP = 60;   // 1.10: faster, with bigger gaps to balance
   const CYCLE_SECONDS = 80;
   let HORIZON = SKY_H - 56;
   const ARC = 112;
@@ -1304,7 +1304,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
   // Columns
   function spawn(x) {
-    const gapStart = isEasy() ? 104 : GAP_START, gapMin = isEasy() ? 78 : GAP_MIN;
+    const gapStart = isEasy() ? 114 : GAP_START, gapMin = isEasy() ? 88 : GAP_MIN;
     const gap = 2 * Math.round(Math.max(gapMin, gapStart - spawnCount * GAP_STEP) / 2);
     spawnCount++;
     const lo = gap / 2 + 26, hi = SKY_H - 22 - gap / 2;
@@ -1817,7 +1817,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   // PeerJS connects the two phones directly (WebRTC). Its free public server only
   // introduces them using a room code; after that the game data goes phone to phone.
   const PEER_JS = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';
-  const ROOM_PREFIX = 'happybird-room-';
+  // The number changes whenever the pipes change, so players on different versions
+  // never end up in the same match (they would see different pipes)
+  const ROOM_PREFIX = 'happybird-room2-';
   const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const vsHud = $('vsHud');
   let peerLoad = null;
@@ -2129,7 +2131,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   // take the slot yourself and wait. The next player who searches connects to you.
   // Once matched, the waiting player gives the slot back so others can use it.
   // The number in the name keeps different game versions from being matched together.
-  const MM_PREFIX = 'happybird-lobby-v1-', MM_SLOTS = 4;
+  const MM_PREFIX = 'happybird-lobby-v2-', MM_SLOTS = 4;
   const wait = ms => new Promise(ok => setTimeout(ok, ms));
   function mmJoin(me, slot) {   // resolves 'matched', 'empty' (nobody waiting) or 'busy'
     return new Promise(res => {
