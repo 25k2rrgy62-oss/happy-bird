@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['index.html', '*.png', '*.PNG', '.github/workflows/build.yml']
+    paths: ['index.html', 'CHANGELOG.md', '*.png', '*.PNG', '.github/workflows/build.yml']
 
 permissions:
   contents: write
@@ -216,12 +216,17 @@ jobs:
           V=$(grep -o 'name="app-version" content="[0-9.]*"' index.html | grep -o '[0-9][0-9.]*')
           files=$(ls HappyBird.apk HappyBird.ipa 2>/dev/null)
           ls -la $files
-          NOTES="Happy Bird version $V.
+          # This version's section of CHANGELOG.md becomes the release notes
+          CHANGES=$(awk -v v="$V" '$0 ~ "^## "v"( |$)" {f=1; next} /^## / {f=0} f' CHANGELOG.md 2>/dev/null)
+          NOTES="${CHANGES:-Happy Bird version $V.}
 
-          Android: download HappyBird.apk on your phone and open it to install.
-          iPhone: HappyBird.ipa is unsigned, so install it with a sideloading tool such as AltStore or Sideloadly."
+          ---
+          **Android:** download HappyBird.apk on your phone and open it to install.
+          **iPhone:** HappyBird.ipa is unsigned, so install it with a sideloading tool such as AltStore or Sideloadly.
+          Full history: [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/main/CHANGELOG.md)"
           if gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "v$V" $files --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit "v$V" --notes "$NOTES" --repo "$GITHUB_REPOSITORY"
           else
             gh release create "v$V" $files --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Happy Bird v$V" --notes "$NOTES"
           fi

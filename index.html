@@ -12,7 +12,7 @@ img { max-width: 100%; }
 </head>
 <body>
 <title>Happy Bird</title>
-<meta name="app-version" content="1.8.0">
+<meta name="app-version" content="1.9.0">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -320,6 +320,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 }
 .fxbar span { font: 600 13px/1 var(--body); padding: 4px 6px; border: 2px solid var(--ink); background: #9be07a; color: var(--ink); }
 .fxbar span.bad { background: #d79ae8; }
+.fxbar span.roll { background: var(--sun); }
+.fxbar span.roll.spin { background: #fff; }
 .toast {
   position: absolute;
   left: 50%;
@@ -1143,13 +1145,14 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     const r = Math.random();
     return r < 0.38 ? 'box' : 'orb';
   }
-  function applyEffect(k) {
+  function applyEffect(k, fromRoll) {
     const d = ITEMS[k];
     if (d.opp) delete effects[d.opp];
     effects[k] = d.dur;
-    toast(d.name + (d.good ? '!' : '...'), d.good ? 'good' : 'bad');
-    if (d.good) { prog.stats.powerups++; track('powerups', 1); tone(660, 1320, 0.18, 'triangle', 0.06); }
-    else { prog.stats.debuffs++; tone(420, 140, 0.3, 'sawtooth', 0.05); }
+    toast((fromRoll ? 'ROLL: ' : '') + d.name + (d.good ? '!' : '...'), d.good ? 'good' : 'bad');
+    // Rolls don't count for stats or missions: only orbs you catch on purpose do
+    if (d.good) { if (!fromRoll) { prog.stats.powerups++; track('powerups', 1); } tone(660, 1320, 0.18, 'triangle', 0.06); }
+    else { if (!fromRoll) prog.stats.debuffs++; tone(420, 140, 0.3, 'sawtooth', 0.05); }
     buzz('item');
   }
   function collectItem(it) {
@@ -1167,12 +1170,35 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   const hitR = () => HIT_R * (effects.tiny ? 0.6 : effects.big ? 1.45 : 1);
   const fxbar = $('fxbar');
   let fxText = '';
+  // Chaos roll: every few seconds a random power-up or debuff is applied, so avoiding
+  // all the orbs is not a safe way to play. The last moment shows a spinning "slot".
+  const ROLL_EVERY = 5, ALL_FX = Object.keys(ITEMS);
+  let rollT = ROLL_EVERY;
+  const rolling = () => gameMode === 'chaos' && !vs && state === 'playing';
+  function rollTick(dt) {
+    if (!rolling()) return;
+    rollT -= dt;
+    if (rollT > 0) return;
+    rollT = ROLL_EVERY;
+    applyEffect(Math.random() < 0.5 ? anyOf(GOOD) : anyOf(BAD), true);
+  }
+  function rollLabel() {
+    if (!rolling()) return '';
+    if (rollT > 0.8) return 'ROLL IN ' + Math.ceil(rollT);
+    return 'ROLL: ' + ITEMS[ALL_FX[Math.floor(t * 14) % ALL_FX.length]].name + '?';   // slot-machine spin
+  }
   function syncFx() {
-    const keys = Object.keys(effects);
-    const s = keys.map(k => k + Math.ceil(effects[k])).join();
+    const keys = Object.keys(effects), roll = rollLabel();
+    const s = roll + '|' + keys.map(k => k + Math.ceil(effects[k])).join();
     if (s === fxText) return;
     fxText = s;
     fxbar.textContent = '';
+    if (roll) {
+      const r = document.createElement('span');
+      r.className = 'roll' + (rollT <= 0.8 ? ' spin' : '');
+      r.textContent = roll;
+      fxbar.appendChild(r);
+    }
     keys.forEach(k => {
       const e = document.createElement('span');
       e.className = ITEMS[k].good ? '' : 'bad';
@@ -1343,7 +1369,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   function reset() {
     state = 'ready';
     bird = { y: anyOpen() ? BIRD_Y_MENU : BIRD_Y, vy: 0, rot: 0, wing: 0 };
-    cols = []; bonus = []; items = []; effects = {}; invuln = 0; runCounted = false; runMedal = -1;
+    cols = []; bonus = []; items = []; effects = {}; invuln = 0; runCounted = false; runMedal = -1; rollT = ROLL_EVERY;
     prevGy = null; spawnCount = 0; runCoins = 0; revives = 0; dist = 0; fillCols(); syncFx();
     resumeHint.hidden = true;
     score = 0; isNew = false; panelShown = false; autoFlap = 0;
@@ -1356,7 +1382,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       resumeHint.textContent = 'Tap to fly while you wait'; resumeHint.hidden = false;
     }
     $('readyText').textContent = gameMode === 'chaos'
-      ? 'Chaos mode! Every glowing orb is a surprise: it could help you or hurt you. ? boxes might hold coins.'
+      ? 'Chaos mode! Every glowing orb is a surprise, and every 5 seconds the roll gives you a random power-up or debuff.'
       : gameMode === 'easy'
       ? 'Easy mode: wider gaps, slower pipes and softer gravity. Great for practice! (No medals.)'
       : 'Tap, click or press Space to flap. Each pipe earns a coin. Floating coins are a bonus.';
@@ -2362,6 +2388,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       if (!runCounted && real) { runCounted = true; prog.stats.games++; track('games', 1); }
       if (real) prog.stats.time += dt;
       for (const k in effects) { effects[k] -= dt; if (effects[k] <= 0) delete effects[k]; }
+      rollTick(dt);
       if (invuln > 0) invuln = Math.max(0, invuln - dt);
       syncFx();
       const speed = (BASE_SPEED + Math.min(score, RAMP_CAP) * SPEED_RAMP) * (effects.slow ? 0.65 : effects.fast ? 1.35 : 1) * (isEasy() ? 0.82 : 1);

@@ -1,0 +1,71 @@
+# Changelog
+
+All notable changes to Happy Bird. The newest version is at the top.
+Downloads for every version are on the [Releases page](https://github.com/25k2rrgy62-oss/happy-bird/releases).
+
+## 1.9.0 (2026-11-07)
+
+### Changed
+- **Chaos mode balance:** a roll timer at the top of the screen now gives you a random power-up or debuff every 5 seconds, so dodging every orb is no longer a safe strategy. It counts down ("ROLL IN 3"), then spins through the effects like a slot machine before landing.
+- Effects from the roll don't count toward stats or the "Catch power-ups" mission. Only orbs you catch yourself do.
+
+## 1.8.0 (2026-11-07)
+
+### Added
+- **Players online:** the home screen and the Versus panel show how many players are online.
+- **Play while you wait:** after you tap Find Match you can fly practice runs. A bar at the bottom shows the search time and has only a Cancel button. Practice runs don't give coins, stats or medals.
+- New effects: a puff of air when you flap, feathers when you crash, a shadow under the bird and soft shadows beside the pipes.
+
+### Improved
+- Drawing is about 3.7× faster (less battery use and smoother on older phones), with the same look.
+
+## 1.7.0 (2026-11-06)
+
+### Added
+- **Coin Magnet** ability in the Shop: 3 levels that pull floating coins toward you in every mode.
+- **Versus bots:** Easy, Normal and Hard bots that race you on the same pipes. Works offline.
+- **Easy mode:** wider gaps, slower pipes and softer gravity, with its own best score (no medals).
+
+## 1.6.0 (2026-11-04)
+
+### Added
+- **Versus matchmaking:** Find Match pairs you with another player who is searching.
+
+## 1.5.0 (2026-11-04)
+
+### Changed
+- Missions are harder and pay more (30–75 coins).
+- Medals are farther apart, and there are two new ones: Bronze 15, Silver 30, Gold 50, Platinum 75, **Diamond 100**, **Legend 150**.
+
+### Added
+- Version number on the start screen and in the app info.
+
+## 1.4.0 (2026-11-04)
+
+### Added
+- **5 daily missions** that change every day.
+- **Online Versus:** race a friend with a 4-letter room code, with the same pipes and a ghost bird.
+
+## 1.3.0 (2026-11-04)
+
+### Changed
+- The Android and iPhone apps are built from the same game file by one build.
+
+## 1.2.0 (2026-11-04)
+
+### Changed
+- Chaos mode orbs all look the same: you only find out if it's a power-up or a debuff when you catch it.
+
+## 1.1.0 (2026-11-04)
+
+### Added
+- Missions, Stats, a daily reward with streaks, medals, vibration, and **Chaos mode** with power-ups, debuffs and mystery boxes.
+
+### Fixed
+- The Android download is now a plain `.apk` on the Releases page instead of a zip that phones reported as corrupt.
+
+## 1.0.0
+
+- The original Happy Bird: flapping, pipes, coins, the shop, themes, bird colors, hats, revives and music.
+
+Version numbers were added in 1.5.0; the numbers for 1.0.0 to 1.4.0 were given afterwards.
