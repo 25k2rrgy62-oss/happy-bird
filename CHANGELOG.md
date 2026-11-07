@@ -3,6 +3,16 @@
 All notable changes to Happy Bird. The newest version is at the top.
 Downloads for every version are on the [Releases page](https://github.com/25k2rrgy62-oss/happy-bird/releases).
 
+## 1.11.0 (2026-11-07)
+
+### Added
+- **7 new maps:** Desert (200), Jungle with fireflies (300), Arctic with snow (400), Volcano with rising embers (600), City Night with rain (800), Neon (1,200) and Royal Gold (2,500). The Shop shows a small preview colour for every map.
+- **7 new special birds:** Penguin (300), Zombie (400), Ice (500), Phoenix (800), Galaxy (1,200), Diamond (1,800) and Legend (2,500).
+- **8 new hats:** Chef hat (150), Flower crown (200), Cowboy hat (250), Devil horns (300), Viking helmet (400), Pirate hat (500), Halo (1,000) and Diamond crown (2,000).
+- **6 new bird colours:** Mint, Ocean, Rose, Lime, Midnight and Coal (60–150).
+- **Trails**, a new kind of item: particles that follow your bird. Sparkles (200), Bubbles (300), Hearts (400), Leaves (500), Fire (800), Stardust (1,200) and Rainbow (2,000). Choose one in Settings → Trail.
+- **Medal locks for the top items:** the most expensive items also need a medal before you can buy them (Phoenix needs Gold; Galaxy, Neon, Halo and Stardust need Platinum; Diamond bird, Diamond crown and Rainbow trail need Diamond; Legend bird and Royal Gold need Legend). A better medal also counts.
+
 ## 1.10.0 (2026-11-07)
 
 ### Changed
