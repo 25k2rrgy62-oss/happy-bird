@@ -20,6 +20,7 @@ This is a test version. It has its own download page and does not replace the fi
   - **Starter Shield:** every run starts with a shield that blocks one crash for the first 10, 15, 20 seconds. Not in Versus.
 - **Player levels:** every pipe is 1 XP (half in Easy mode). Each new level pays coins, and your level shows on the home screen, the game-over card and in Stats.
 - **Expert bot** in Versus → Play a bot. It crashes far less often than the Hard bot.
+- **Bots have their own random look** every match: either a plain bird colour or a special bird, sometimes with a hat and sometimes with an extra. Holiday-only items are never used. Before, the bot looked exactly like your own bird.
 - **Coins for beating a bot**, more for tougher bots: Easy 5, Normal 15, Hard 40, Expert 100. The Versus panel lists the rewards.
 
 ### Changed

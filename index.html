@@ -2287,7 +2287,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     vs.rng = mulberry32(seed); vs.f = null;
     vs.them = { y: 0.5, ry: 0.5, d: 0, at: performance.now(), sc: 0, dead: false, left: false, wing: 0, rot: 0, pvy: 0 };
     vs.rematch = { me: false, them: false }; vs.recorded = false; vs.wonCoins = 0; vs.sendAcc = 0; vs.count = 3;
-    if (vs.bot) { vs.bot.y = BIRD_Y; vs.bot.vy = 0; vs.bot.acc = 0; }
+    if (vs.bot) { vs.bot.y = BIRD_Y; vs.bot.vy = 0; vs.bot.acc = 0; vs.bot.look = randomBotLook(); vs.bot.sprites = {}; }
     reset();
     readyEl.hidden = true;
     resumeHint.textContent = 'Get ready! 3'; resumeHint.hidden = false;
@@ -2317,6 +2317,21 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     expert: { name: 'Expert bot', crash: 0.006, win: 100 }
   };
   $('botNote').textContent = 'Coins for a win: ' + Object.keys(BOTS).map(k => BOTS[k].name.replace(' bot', '') + ' ' + BOTS[k].win).join(' · ');
+  // Every bot match gets a new random look: a plain colour or a special bird, sometimes a hat, sometimes an extra.
+  // Holiday-only items are left out so they stay special.
+  function randomBotLook() {
+    const pick = obj => anyOf(Object.keys(obj).filter(k => !obj[k].event));
+    const look = Math.random() < 0.4
+      ? skinLook(pick(SKINS), Math.floor(Math.random() * 12) * 30)   // special bird (the hue only matters for Rainbow)
+      : { pal: anyOf(BIRDS) };                                        // just a colour
+    if (Math.random() < 0.5) look.hat = HATS[pick(HATS)];
+    if (Math.random() < 0.25) look.acc = ACCS[pick(ACCS)];
+    return look;
+  }
+  function botSprite(wingKey) {
+    const b = vs.bot;
+    return b.sprites[wingKey] || (b.sprites[wingKey] = buildBird(b.look, wingKey));
+  }
   function vsBot(level) {
     if (vs) vsLeave();
     vs = { host: true, bot: { ...BOTS[level], level, y: BIRD_Y, vy: 0, acc: 0 }, code: null, peer: null, conn: null, them: null, rematch: { me: false, them: false } };
@@ -2424,7 +2439,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     const gd = g.d + (BASE_SPEED + Math.min(g.sc, RAMP_CAP) * SPEED_RAMP) * lag;
     const gx = BIRD_X + (gd - dist) - (vs.bot ? 12 : 0);   // bot flies just behind you so you can see it
     if (gx < -20 || gx > W + 20) return;
-    const spr = birdSprite(g.wing > 0.55 ? 'down' : g.wing > 0.15 ? 'up' : 'mid'), k = BS * BIRD_SCALE;
+    const wk = g.wing > 0.55 ? 'down' : g.wing > 0.15 ? 'up' : 'mid';
+    const spr = vs.bot && vs.bot.look ? botSprite(wk) : birdSprite(wk), k = BS * BIRD_SCALE;
     bctx.setTransform(1, 0, 0, 1, 0, 0);
     bctx.translate((gx + shX) * BS, (g.ry * SKY_H + shY) * BS);
     bctx.rotate(g.rot);
