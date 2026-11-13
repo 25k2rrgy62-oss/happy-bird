@@ -19,6 +19,8 @@ This is a test version. It has its own download page and does not replace the fi
   - **Cheap Revive:** revives cost 20%, 35%, 50% less.
   - **Starter Shield:** every run starts with a shield that blocks one crash for the first 10, 15, 20 seconds. Not in Versus.
 - **Player levels:** every pipe is 1 XP (half in Easy mode). Each new level pays coins, and your level shows on the home screen, the game-over card and in Stats.
+- **Expert bot** in Versus → Play a bot. It crashes far less often than the Hard bot.
+- **Coins for beating a bot**, more for tougher bots: Easy 5, Normal 15, Hard 40, Expert 100. The Versus panel lists the rewards.
 
 ### Changed
 - The Shop has two more tabs, Extras and Pets.

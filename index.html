@@ -608,7 +608,9 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
           <button id="botEasy" class="opt" type="button">Easy bot</button>
           <button id="botNormal" class="opt" type="button">Normal bot</button>
           <button id="botHard" class="opt" type="button">Hard bot</button>
+          <button id="botExpert" class="opt" type="button">Expert bot</button>
         </div>
+        <p id="botNote" class="shop-note"></p>
       </div>
       <div class="group"><h3>Play a friend</h3><button id="vsHost" class="btn ghost" type="button">CREATE ROOM</button></div>
       <div class="group">
@@ -2284,7 +2286,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (shopOpen) closeShop();
     vs.rng = mulberry32(seed); vs.f = null;
     vs.them = { y: 0.5, ry: 0.5, d: 0, at: performance.now(), sc: 0, dead: false, left: false, wing: 0, rot: 0, pvy: 0 };
-    vs.rematch = { me: false, them: false }; vs.recorded = false; vs.sendAcc = 0; vs.count = 3;
+    vs.rematch = { me: false, them: false }; vs.recorded = false; vs.wonCoins = 0; vs.sendAcc = 0; vs.count = 3;
     if (vs.bot) { vs.bot.y = BIRD_Y; vs.bot.vy = 0; vs.bot.acc = 0; }
     reset();
     readyEl.hidden = true;
@@ -2307,7 +2309,14 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   }
   // Bots: a computer bird on the same pipes. It steers toward each gap, and every pipe it
   // passes it has a small chance to crash. Harder bots crash less often.
-  const BOTS = { easy: { name: 'Easy bot', crash: 0.09 }, normal: { name: 'Normal bot', crash: 0.04 }, hard: { name: 'Hard bot', crash: 0.016 } };
+  // crash = chance to crash at each pipe (lower = tougher), win = coins for beating it
+  const BOTS = {
+    easy:   { name: 'Easy bot', crash: 0.09, win: 5 },
+    normal: { name: 'Normal bot', crash: 0.04, win: 15 },
+    hard:   { name: 'Hard bot', crash: 0.016, win: 40 },
+    expert: { name: 'Expert bot', crash: 0.006, win: 100 }
+  };
+  $('botNote').textContent = 'Coins for a win: ' + Object.keys(BOTS).map(k => BOTS[k].name.replace(' bot', '') + ' ' + BOTS[k].win).join(' · ');
   function vsBot(level) {
     if (vs) vsLeave();
     vs = { host: true, bot: { ...BOTS[level], level, y: BIRD_Y, vy: 0, acc: 0 }, code: null, peer: null, conn: null, them: null, rematch: { me: false, them: false } };
@@ -2358,12 +2367,13 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       text += score + ' – ' + g.sc;
       if (!vs.recorded) {
         vs.recorded = true;
-        if (vs.bot) { if (score > g.sc) prog.stats.botWins++; }
+        if (vs.bot) { if (score > g.sc) { prog.stats.botWins++; vs.wonCoins = vs.bot.win; grant(vs.bot.win); } }
         else { prog.stats.vsGames++; if (score > g.sc) { prog.stats.vsWins++; track('versus', 1); } }
         if (score > g.sc) { buzz('win'); tone(784, 1568, 0.3, 'triangle', 0.06); }
         saveProg();
       }
       if (g.left) text += ' · Rival left';
+      if (vs.wonCoins) text += '\n+' + vs.wonCoins + ' coins for the win';
     }
     if (vs.rematch.me && !vs.rematch.them && !(g && g.left)) text += '\nWaiting for rival to rematch…';
     else if (vs.rematch.them && !vs.rematch.me) text += '\nRival wants a rematch!';
@@ -2522,6 +2532,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   $('botEasy').addEventListener('click', () => { audio(); vsBot('easy'); });
   $('botNormal').addEventListener('click', () => { audio(); vsBot('normal'); });
   $('botHard').addEventListener('click', () => { audio(); vsBot('hard'); });
+  $('botExpert').addEventListener('click', () => { audio(); vsBot('expert'); });
 
   // ---------- Matchmaking ----------
   // There is no game server, so the lobby is a few shared names on the PeerJS server
