@@ -2283,7 +2283,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (settingsOpen) closeSettings();
     if (shopOpen) closeShop();
     vs.rng = mulberry32(seed); vs.f = null;
-    vs.them = { y: 0.5, ry: 0.5, d: 0, at: performance.now(), sc: 0, dead: false, left: false };
+    vs.them = { y: 0.5, ry: 0.5, d: 0, at: performance.now(), sc: 0, dead: false, left: false, wing: 0, rot: 0, pvy: 0 };
     vs.rematch = { me: false, them: false }; vs.recorded = false; vs.sendAcc = 0; vs.count = 3;
     if (vs.bot) { vs.bot.y = BIRD_Y; vs.bot.vy = 0; vs.bot.acc = 0; }
     reset();
@@ -2328,7 +2328,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
       const target = next ? next.gy + 7 : SKY_H * 0.5;
       b.vy = Math.min(MAX_FALL, b.vy + GRAV * dt);
       b.y += b.vy * dt;
-      if (b.y > target && b.vy > 0) b.vy = FLAP;
+      if (b.y > target && b.vy > 0) { b.vy = FLAP; g.wing = 1; }
       b.y = clamp(b.y, 8, SKY_H - 8);
       g.y = b.y / SKY_H; g.d = dist; g.at = performance.now();
       if (score > g.sc) { g.sc = score; if (Math.random() < b.crash) botCrash(); }
@@ -2389,7 +2389,15 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     const g = vs.them;
     if (!g) return;
     if (vs.bot) botTick(dt);
+    const ryBefore = g.ry;
     g.ry += (g.y - g.ry) * Math.min(1, dt * 12);
+    // Animate the rival from how it moves: flap the wing when it starts going up, and tilt it like your own bird.
+    // (Online we only receive its height, so the flap is worked out from that.)
+    const gvy = dt > 0 ? (g.ry - ryBefore) * SKY_H / dt : 0;
+    if (gvy < -40 && g.pvy >= -40) g.wing = 1;
+    g.pvy = gvy;
+    g.wing = Math.max(0, g.wing - dt / 0.24);
+    g.rot += (clamp(gvy / 240, -0.4, 1.4) - g.rot) * Math.min(1, dt * 14);
     if (state === 'playing') {
       vs.sendAcc += dt;
       if (vs.sendAcc >= 0.1) { vs.sendAcc = 0; vsSend({ t: 's', y: +(bird.y / SKY_H).toFixed(4), d: Math.round(dist), sc: score }); }
@@ -2406,9 +2414,10 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     const gd = g.d + (BASE_SPEED + Math.min(g.sc, RAMP_CAP) * SPEED_RAMP) * lag;
     const gx = BIRD_X + (gd - dist) - (vs.bot ? 12 : 0);   // bot flies just behind you so you can see it
     if (gx < -20 || gx > W + 20) return;
-    const spr = birdSprite('mid'), k = BS * BIRD_SCALE;
+    const spr = birdSprite(g.wing > 0.55 ? 'down' : g.wing > 0.15 ? 'up' : 'mid'), k = BS * BIRD_SCALE;
     bctx.setTransform(1, 0, 0, 1, 0, 0);
     bctx.translate((gx + shX) * BS, (g.ry * SKY_H + shY) * BS);
+    bctx.rotate(g.rot);
     bctx.globalAlpha = 0.45;
     bctx.drawImage(spr, -(13 + PADX * PX) * k, -(10 + PADT * PX) * k, spr.width * k, spr.height * k);
     bctx.globalAlpha = 1;

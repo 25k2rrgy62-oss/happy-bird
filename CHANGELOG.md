@@ -25,6 +25,9 @@ This is a test version. It has its own download page and does not replace the fi
 - The game-over card shows coins and XP on one line, hides pop-up messages, and stays below the top buttons on small screens.
 - Versus still uses Classic rules whatever mode is selected, so alpha players can be matched with 1.13.0 players.
 
+### Fixed
+- The rival bird in Versus (bots and online players) now flaps its wings and tilts as it flies. Before, it was a single frozen picture that only slid up and down.
+
 ## 1.13.0 (2026-11-13)
 
 ### Added
