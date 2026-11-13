@@ -3,6 +3,28 @@
 All notable changes to Happy Bird. The newest version is at the top.
 Downloads for every version are on the [Releases page](https://github.com/25k2rrgy62-oss/happy-bird/releases).
 
+## 1.14.0-alpha (2026-11-13)
+
+This is a test version. It has its own download page and does not replace the finished 1.13.0 release.
+
+### Added
+- **3 new game modes**, picked from a new **Mode** button on the home screen that opens a list with a description and your best score for each:
+  - **Wobble:** the gaps slide up and down.
+  - **Hardcore:** tighter gaps and faster pipes, but every coin counts double.
+  - **Rush:** 60 seconds on the clock. A crash costs 5 seconds instead of ending the run. No medals.
+- **Extras**, a second thing to wear together with a hat: Scarf (80), Bow tie (120), Hero cape (200), Sneakers (250), Jetpack (400), Fancy tail (600), Angel wings (1,000, needs Gold) and Royal cape (1,800, needs Diamond). Choose one in Settings → Extra.
+- **Pets** that float along behind your bird: Baby chick (150), Balloon (250), Bee (350), Butterfly (500), Tiny cloud (700), Little ghost (900), UFO (1,400, needs Platinum) and Lucky star (2,000, needs Diamond). Choose one in Settings → Pet.
+- **3 new abilities** in Shop → Deals, each with 3 levels like the Coin Magnet:
+  - **Lucky Coins:** more sparkly coins (24%, 30%, 36% instead of 18%).
+  - **Cheap Revive:** revives cost 20%, 35%, 50% less.
+  - **Starter Shield:** every run starts with a shield that blocks one crash for the first 10, 15, 20 seconds. Not in Versus.
+- **Player levels:** every pipe is 1 XP (half in Easy mode). Each new level pays coins, and your level shows on the home screen, the game-over card and in Stats.
+
+### Changed
+- The Shop has two more tabs, Extras and Pets.
+- The game-over card shows coins and XP on one line, hides pop-up messages, and stays below the top buttons on small screens.
+- Versus still uses Classic rules whatever mode is selected, so alpha players can be matched with 1.13.0 players.
+
 ## 1.13.0 (2026-11-13)
 
 ### Added
