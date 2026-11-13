@@ -3,6 +3,13 @@
 All notable changes to Happy Bird. The newest version is at the top.
 Downloads for every version are on the [Releases page](https://github.com/25k2rrgy62-oss/happy-bird/releases).
 
+## 1.13.0 (2026-11-13)
+
+### Added
+- **Pause:** a Pause button in the top-left while you fly (or press P). The game also pauses by itself when you switch apps or a call comes in. Tap to keep flying. Matches against real players can't be paused.
+- **Android back button:** closes the open panel, pauses a run, leaves the game-over screen or cancels a match search. On the home screen it minimises the app instead of quitting.
+- **Share your score:** a SHARE button on the game-over screen opens the phone's share sheet with your score, medal and a download link.
+
 ## 1.12.0 (2026-11-07)
 
 ### Changed

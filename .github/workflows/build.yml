@@ -15,6 +15,8 @@ permissions:
 env:
   CAP_VERSION: 6.2.0
   HAPTICS_VERSION: 6.0.2
+  APP_PLUGIN_VERSION: 6.0.2
+  SHARE_VERSION: 6.0.3
 
 jobs:
   android:
@@ -58,7 +60,7 @@ jobs:
       - name: Create the Android project
         run: |
           npm init -y
-          npm install @capacitor/core@$CAP_VERSION @capacitor/cli@$CAP_VERSION @capacitor/android@$CAP_VERSION @capacitor/haptics@$HAPTICS_VERSION
+          npm install @capacitor/core@$CAP_VERSION @capacitor/cli@$CAP_VERSION @capacitor/android@$CAP_VERSION @capacitor/haptics@$HAPTICS_VERSION @capacitor/app@$APP_PLUGIN_VERSION @capacitor/share@$SHARE_VERSION
           mkdir -p www
           cp index.html www/index.html
           cat > capacitor.config.json <<'JSON'
@@ -130,7 +132,7 @@ jobs:
         run: |
           [ -f index.html ] || { echo "::error::index.html not found. Upload the game as index.html."; exit 1; }
           npm init -y
-          npm install @capacitor/core@$CAP_VERSION @capacitor/cli@$CAP_VERSION @capacitor/ios@$CAP_VERSION @capacitor/haptics@$HAPTICS_VERSION
+          npm install @capacitor/core@$CAP_VERSION @capacitor/cli@$CAP_VERSION @capacitor/ios@$CAP_VERSION @capacitor/haptics@$HAPTICS_VERSION @capacitor/app@$APP_PLUGIN_VERSION @capacitor/share@$SHARE_VERSION
           mkdir -p www
           cp index.html www/index.html
           cat > capacitor.config.json <<'JSON'
