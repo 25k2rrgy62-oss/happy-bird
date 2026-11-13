@@ -21,6 +21,10 @@ This is a test version. It has its own download page and does not replace the fi
 - **Player levels:** every pipe is 1 XP (half in Easy mode). Each new level pays coins, and your level shows on the home screen, the game-over card and in Stats.
 - **Expert bot** in Versus → Play a bot. It crashes far less often than the Hard bot.
 - **Bots have their own random look** every match: either a plain bird colour or a special bird, sometimes with a hat and sometimes with an extra. Holiday-only items are never used. Before, the bot looked exactly like your own bird.
+- **Perfect passes:** fly through the middle of a gap for a bonus coin and a "PERFECT" pop-up. Do it pipe after pipe to build a combo ("PERFECT ×5"); the sound climbs higher as the streak grows. New daily mission: "Fly N perfect passes". Stats track your perfect passes and best streak.
+- **Top runs:** Stats shows your 5 best runs (with dates) for the mode you have selected.
+- **Online rivals look like themselves:** in Versus you now see the other player's real bird, hat and extra instead of a copy of your own.
+- Small details: "NEW BEST!" when you beat your best mid-run (and the score turns gold), confetti every 10 points, "GO!" when a Versus countdown ends, and the coin counter bounces when you earn coins.
 - **Coins for beating a bot**, more for tougher bots: Easy 5, Normal 15, Hard 40, Expert 100. The Versus panel lists the rewards.
 
 ### Changed
