@@ -31,6 +31,7 @@ This is a test version. It has its own download page and does not replace the fi
 - The Shop has two more tabs, Extras and Pets.
 - The game-over card shows coins and XP on one line, hides pop-up messages, and stays below the top buttons on small screens.
 - Versus still uses Classic rules whatever mode is selected, so alpha players can be matched with 1.13.0 players.
+- **Inventory:** a new Inventory button on the home screen is where you choose your bird colour, special bird, hat, extra, trail, pet and map, split into tabs (Bird, Wear, Trail, Pet, Map). Settings now only has time of day, music and vibration.
 
 ### Fixed
 - **Online play is more reliable:** connections no longer depend on an extra web request (which could fail inside the installed app), use more servers to find a path between the two phones, and wait longer on slow mobile networks. If a room is found but the phones can't connect, you now get a message saying so instead of waiting forever. PeerJS's backup relay servers have shut down, so two phones that can't reach each other directly (often on mobile data) may still fail until a relay (TURN) service is added; using the same Wi-Fi works around it.

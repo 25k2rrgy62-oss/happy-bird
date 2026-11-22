@@ -309,7 +309,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 .tab[aria-selected="true"] { background: var(--ink); color: var(--paper); }
 .tab:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
 .tab .dot { display: inline-block; width: 7px; height: 7px; margin-left: 4px; background: var(--berry); border: 1px solid var(--ink); border-radius: 50%; vertical-align: 1px; }
-#shop .group[data-tab] { margin-top: 10px; }
+#shop .group[data-tab], #inventory .group[data-tab] { margin-top: 10px; }
+.shop-tabs.inv-tabs { grid-template-columns: repeat(5, 1fr); }
 .buy.locked { background: var(--paper-edge); font-size: 12px; }
 .buy:disabled { background: var(--paper); opacity: 0.6; cursor: default; }
 .buy:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
@@ -503,6 +504,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
 
     <div id="menu" class="menu">
       <button id="modeBtn" class="chip" type="button">Mode: Classic</button>
+      <button id="invBtn" class="chip" type="button">Inventory</button>
       <button id="missionsBtn" class="chip" type="button">Missions</button>
       <button id="statsBtn" class="chip" type="button">Stats</button>
       <button id="versusBtn" class="chip" type="button">Versus</button>
@@ -539,36 +541,6 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
         <p id="bgNote" class="note"></p>
       </div>
       <div class="group">
-        <h3 id="seasonLabel">Theme</h3>
-        <div id="seasonOpts" class="opts" role="radiogroup" aria-labelledby="seasonLabel"></div>
-        <p id="seasonNote" class="note"></p>
-      </div>
-      <div class="group">
-        <h3 id="birdLabel">Bird color</h3>
-        <div id="birdOpts" class="swatches" role="radiogroup" aria-labelledby="birdLabel"></div>
-        <p id="birdNote" class="note"></p>
-      </div>
-      <div class="group">
-        <h3 id="skinLabel">Special bird</h3>
-        <div id="skinOpts" class="swatches" role="radiogroup" aria-labelledby="skinLabel"></div>
-      </div>
-      <div class="group">
-        <h3 id="hatLabel">Hat</h3>
-        <div id="hatOpts" class="swatches" role="radiogroup" aria-labelledby="hatLabel"></div>
-      </div>
-      <div class="group">
-        <h3 id="accLabel">Extra</h3>
-        <div id="accOpts" class="swatches" role="radiogroup" aria-labelledby="accLabel"></div>
-      </div>
-      <div class="group">
-        <h3 id="trailLabel">Trail</h3>
-        <div id="trailOpts" class="opts" role="radiogroup" aria-labelledby="trailLabel"></div>
-      </div>
-      <div class="group">
-        <h3 id="petLabel">Pet</h3>
-        <div id="petOpts" class="opts" role="radiogroup" aria-labelledby="petLabel"></div>
-      </div>
-      <div class="group">
         <h3 id="musicLabel">Music</h3>
         <div id="musicOpts" class="opts" role="radiogroup" aria-labelledby="musicLabel"></div>
       </div>
@@ -577,6 +549,49 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
         <div id="vibOpts" class="opts" role="radiogroup" aria-labelledby="vibLabel"></div>
       </div>
       <button id="settingsDone" class="btn" type="button">DONE</button>
+    </section>
+
+    <section id="inventory" class="panel card" role="dialog" aria-label="Inventory" hidden>
+      <h2>INVENTORY</h2>
+      <div class="shop-tabs inv-tabs" role="tablist" aria-label="Inventory sections">
+        <button class="tab" type="button" role="tab" data-tab="bird">Bird</button>
+        <button class="tab" type="button" role="tab" data-tab="wear">Wear</button>
+        <button class="tab" type="button" role="tab" data-tab="trail">Trail</button>
+        <button class="tab" type="button" role="tab" data-tab="pet">Pet</button>
+        <button class="tab" type="button" role="tab" data-tab="map">Map</button>
+      </div>
+      <div class="group" data-tab="bird">
+        <h3 id="birdLabel">Bird color</h3>
+        <div id="birdOpts" class="swatches" role="radiogroup" aria-labelledby="birdLabel"></div>
+        <p id="birdNote" class="note"></p>
+      </div>
+      <div class="group" data-tab="bird">
+        <h3 id="skinLabel">Special bird</h3>
+        <div id="skinOpts" class="swatches" role="radiogroup" aria-labelledby="skinLabel"></div>
+      </div>
+      <div class="group" data-tab="wear">
+        <h3 id="hatLabel">Hat</h3>
+        <div id="hatOpts" class="swatches" role="radiogroup" aria-labelledby="hatLabel"></div>
+      </div>
+      <div class="group" data-tab="wear">
+        <h3 id="accLabel">Extra</h3>
+        <div id="accOpts" class="swatches" role="radiogroup" aria-labelledby="accLabel"></div>
+      </div>
+      <div class="group" data-tab="trail">
+        <h3 id="trailLabel">Trail</h3>
+        <div id="trailOpts" class="opts" role="radiogroup" aria-labelledby="trailLabel"></div>
+      </div>
+      <div class="group" data-tab="pet">
+        <h3 id="petLabel">Pet</h3>
+        <div id="petOpts" class="opts" role="radiogroup" aria-labelledby="petLabel"></div>
+      </div>
+      <div class="group" data-tab="map">
+        <h3 id="seasonLabel">Map</h3>
+        <div id="seasonOpts" class="opts" role="radiogroup" aria-labelledby="seasonLabel"></div>
+        <p id="seasonNote" class="note"></p>
+      </div>
+      <p class="shop-note">Locked items are unlocked in the Shop.</p>
+      <button id="inventoryDone" class="btn" type="button">DONE</button>
     </section>
 
     <section id="shop" class="panel card" role="dialog" aria-label="Shop" hidden>
@@ -2130,6 +2145,22 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     try { frame.focus({ preventScroll: true }); } catch (e) {}
   }
   shopBtn.addEventListener('click', () => { if (shopOpen) closeShop(); else openShop(); });
+  // Inventory: choose what your bird wears and which map you fly in (things you own)
+  const invBtn = $('invBtn'), invEl = $('inventory');
+  const invTabs = [...invEl.querySelectorAll('.tab')];
+  let invTab = 'bird';
+  try { invTab = localStorage.getItem('happy-bird-inv-tab') || 'bird'; } catch (e) {}
+  function showInvTab(name) {
+    if (!invTabs.some(b => b.dataset.tab === name)) name = 'bird';
+    invTab = name;
+    try { localStorage.setItem('happy-bird-inv-tab', name); } catch (e) {}
+    invTabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    invEl.querySelectorAll('.group[data-tab]').forEach(gp => { gp.hidden = gp.dataset.tab !== name; });
+    invEl.scrollTop = 0;
+  }
+  invTabs.forEach(b => b.addEventListener('click', () => { showInvTab(b.dataset.tab); tone(660, 660, 0.04, 'square', 0.03); }));
+  invBtn.addEventListener('click', () => { audio(); if (xOpen === 'inventory') closeX(); else openX('inventory'); });
+  $('inventoryDone').addEventListener('click', () => closeX());
   const pauseBtn = $('pauseBtn');
   pauseBtn.addEventListener('click', () => { pauseGame(); try { frame.focus({ preventScroll: true }); } catch (e) {} });
   $('overShare').addEventListener('click', () => { audio(); shareScore(); });
@@ -2139,8 +2170,8 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
   reviveBtn.addEventListener('click', () => { audio(); doRevive(); try { frame.focus({ preventScroll: true }); } catch (e) {} });
 
   // Missions, stats and daily reward panels
-  const xPanels = { missions: $('missions'), stats: $('stats'), daily: $('daily'), versus: $('versus'), modes: $('modes') };
-  const xFocus = { missions: 'missionsDone', stats: 'statsDone', daily: 'dailyClaim', versus: 'vsFind', modes: 'modesDone' };
+  const xPanels = { missions: $('missions'), stats: $('stats'), daily: $('daily'), versus: $('versus'), modes: $('modes'), inventory: $('inventory') };
+  const xFocus = { missions: 'missionsDone', stats: 'statsDone', daily: 'dailyClaim', versus: 'vsFind', modes: 'modesDone', inventory: 'inventoryDone' };
   const missionsBtn = $('missionsBtn'), statsBtn = $('statsBtn'), menuEl = $('menu');
   function openX(name) {
     if (state === 'playing' || state === 'revive') return;
@@ -2149,7 +2180,7 @@ canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; 
     if (xOpen) closeX(true);
     xOpen = name;
     if (state === 'dead') reset();
-    if (name === 'missions') renderMissions(); else if (name === 'stats') renderStats(); else if (name === 'versus') vsStatus(''); else if (name === 'modes') renderModes(); else renderDaily();
+    if (name === 'missions') renderMissions(); else if (name === 'stats') renderStats(); else if (name === 'versus') vsStatus(''); else if (name === 'modes') renderModes(); else if (name === 'inventory') { syncSettingsUI(); showInvTab(invTab); } else renderDaily();
     xPanels[name].hidden = false; readyEl.hidden = true; overEl.hidden = true;
     try { $(xFocus[name]).focus({ preventScroll: true }); } catch (e) {}
   }
